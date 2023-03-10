@@ -1,0 +1,17 @@
+{
+    "files.associations": {
+        "rcc_hal.h": "c",
+        "rcc_types.h": "c",
+        "gpio_hal.h": "c",
+        "gpio_types.h": "c",
+        "bit": "c",
+        "type_traits": "c",
+        "limits": "c",
+        "stdint.h": "c",
+        "gpio.h": "c",
+        "gpio_hal_ext.h": "c",
+        "exti_types.h": "c",
+        "assert.h": "c"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
+}

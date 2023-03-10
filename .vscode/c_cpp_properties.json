@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/Components/Utils",
+                "${workspaceFolder}/Components/Utils/Bit_Wise",
+                "${workspaceFolder}/Components/HAL/FLASH",
+                "${workspaceFolder}/Components/HAL/FLASH/STM32F446/LL",
+                "${workspaceFolder}/Components/HAL/FLASH/STM32F446/IMP"
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "databaseFilename": ""
+            },
+            "intelliSenseMode": "linux-gcc-x64",
+            "compilerPath": "/opt/gcc-arm/bin/arm-none-eabi-gcc",
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++14"
+        }
+    ],
+    "version": 4
+}

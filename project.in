@@ -1,0 +1,21 @@
+config PATH_ROOT
+    string
+    option env="PATH_ROOT_ENV"
+
+config PROJECT_PATH
+    string
+    option env="PROJECT_PATH_ENV"
+
+config PROJECT_NAME
+    string
+    option env="PROJECT_NAME_ENV"
+
+menu "Platform Configurations"
+    source "$PATH_ROOT/Components/HAL/hal.in"
+    source "$PATH_ROOT/Components/Drivers/drivers.in"
+    source "$PATH_ROOT/Components/RTOS/rtos.in"
+endmenu
+
+menu "Project Configurations"
+    source "$PROJECT_PATH/$PROJECT_NAME.in"
+endmenu
