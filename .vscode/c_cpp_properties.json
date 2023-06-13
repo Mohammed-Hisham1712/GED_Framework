@@ -16,7 +16,11 @@
                 "${workspaceFolder}/Components/HAL/FLASH/STM32F446/IMP",
                 "${workspaceFolder}/Components/HAL/USART/STM32F446/IMP",
                 "${workspaceFolder}/Components/HAL/USART/STM32F446/LL",
-                "${workspaceFolder}/Components/HAL/USART"
+                "${workspaceFolder}/Components/HAL/USART",
+                "${workspaceFolder}/Components/HAL/TIM_BASIC/STM32F446/IMP",
+                "${workspaceFolder}/Components/HAL/TIM_BASIC/STM32F446/LL",
+                "${workspaceFolder}/Components/HAL/TIM_BASIC",
+                "${workspaceFolder}/Components/Drivers/TIMER",
             ],
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,

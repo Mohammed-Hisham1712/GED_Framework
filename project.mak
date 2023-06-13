@@ -56,7 +56,9 @@ TARGET_BIN := $(PATH_BUILD)/$(PROJECT_NAME).bin
 TARGET_HEX := $(PATH_BUILD)/$(PROJECT_NAME).hex
 
 #Include *.config or SDKCONFIG file
+ifneq (, $(wildcard $(PROJECT_PATH)/$(CONFIG_FILE)))
 include $(PROJECT_PATH)/$(CONFIG_FILE)
+endif
 
 #Include MCU specific makefile
 include $(PATH_MCU)/$(TARGET_MCU).mak

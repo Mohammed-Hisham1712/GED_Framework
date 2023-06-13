@@ -27,6 +27,16 @@ typedef enum
 
 typedef enum
 {
+    RCC_HAL_TIM2 = 0,
+    RCC_HAL_TIM3,
+    RCC_HAL_TIM4,
+    RCC_HAL_TIM5,
+    RCC_HAL_TIM6,
+    RCC_HAL_TIM7,
+} rcc_hal_apb1_periph_t;
+
+typedef enum
+{
     RCC_HAL_USART1 = 4,
     RCC_HAL_USART6 = 5,
     RCC_HAL_SYSCFG = 14,
@@ -40,6 +50,8 @@ typedef struct
 #define RCC_HAL_GET_HW(hal, num)            ((hal)->dev = RCC_LL_GET_HW(num))
 
 #define rcc_hal_ahb1_en_clk(hal, periph)    rcc_ll_ahb1_en_clk((hal)->dev, periph)
+
+#define rcc_hal_apb1_en_clk(hal, periph)    rcc_ll_apb1_en_clk((hal)->dev, periph)
 
 #define rcc_hal_apb2_en_clk(hal, periph)    rcc_ll_apb2_en_clk((hal)->dev, periph)
 

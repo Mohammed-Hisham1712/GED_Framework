@@ -56,6 +56,9 @@ void usart1_irq_handler(void) __attribute__((weak, alias("default_handler")));
 void usart2_irq_handler(void) __attribute__((weak, alias("default_handler")));
 void usart3_irq_handler(void) __attribute__((weak, alias("default_handler")));
 
+void tim6_irq_handler(void)	__attribute__((weak, alias("default_handler")));
+void tim7_irq_handler(void)	__attribute__((weak, alias("default_handler")));
+
 __attribute__((section(".reset_vector")))
 uint32_t reset_vector[RESET_VECTOR_SIZE] = 
 {
@@ -129,8 +132,8 @@ uint32_t reset_vector[RESET_VECTOR_SIZE] =
 	0,
 	0,
 	0,
-	0,
-	0,
+	(uint32_t) &tim6_irq_handler,
+	(uint32_t) &tim7_irq_handler,
 	(uint32_t) &dma2_stream0_irq_handler,
 	(uint32_t) &dma2_stream1_irq_handler,
 	(uint32_t) &dma2_stream2_irq_handler,
