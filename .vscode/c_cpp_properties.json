@@ -5,9 +5,18 @@
             "includePath": [
                 "${workspaceFolder}/Components/Utils",
                 "${workspaceFolder}/Components/Utils/Bit_Wise",
+                "${workspaceFolder}/Components/HAL/GPIO",
+                "${workspaceFolder}/Components/HAL/GPIO/STM32F446/LL",
+                "${workspaceFolder}/Components/HAL/GPIO/STM32F446/IMP",
+                "${workspaceFolder}/Components/HAL/RCC",
+                "${workspaceFolder}/Components/HAL/RCC/STM32F446/LL",
+                "${workspaceFolder}/Components/HAL/RCC/STM32F446/IMP",
                 "${workspaceFolder}/Components/HAL/FLASH",
                 "${workspaceFolder}/Components/HAL/FLASH/STM32F446/LL",
-                "${workspaceFolder}/Components/HAL/FLASH/STM32F446/IMP"
+                "${workspaceFolder}/Components/HAL/FLASH/STM32F446/IMP",
+                "${workspaceFolder}/Components/HAL/USART/STM32F446/IMP",
+                "${workspaceFolder}/Components/HAL/USART/STM32F446/LL",
+                "${workspaceFolder}/Components/HAL/USART"
             ],
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,

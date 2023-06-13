@@ -10,6 +10,8 @@ REMOVE = $(CMDECHO)rm -rf
 CP = cp
 MENUCONFIG = kconfig-mconf
 EXPORT_ENV = export
+GENCONFIG_OPT = --config-file $(CONFIG_FILE) --header-file $(PATH_INCLUDES)/config.h
+GENCONFIG = genconfig.py $(GENCONFIG_OPT)
 
 #Check Makefile variables
 ifndef COMPONENT_SRCDIRS
@@ -52,6 +54,9 @@ endif
 TARGET_ELF := $(PATH_BUILD)/$(PROJECT_NAME).elf
 TARGET_BIN := $(PATH_BUILD)/$(PROJECT_NAME).bin
 TARGET_HEX := $(PATH_BUILD)/$(PROJECT_NAME).hex
+
+#Include *.config or SDKCONFIG file
+include $(PROJECT_PATH)/$(CONFIG_FILE)
 
 #Include MCU specific makefile
 include $(PATH_MCU)/$(TARGET_MCU).mak
@@ -139,6 +144,7 @@ menuconfig:
 	$(EXPORT_ENV) PROJECT_NAME_ENV=$(PROJECT_NAME); \
 	$(EXPORT_ENV) KCONFIG_CONFIG=$(CONFIG_FILE);	\
 	$(MENUCONFIG) $(KCONFIG_INFILE)
+	$(PATH_ROOT)/$(GENCONFIG)
 setup:
 	$(MKDIR) $(PATH_INCLUDES)
 	$(CP) $(INC_H) $(PATH_INCLUDES)

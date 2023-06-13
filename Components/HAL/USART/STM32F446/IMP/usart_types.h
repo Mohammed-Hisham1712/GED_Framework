@@ -53,6 +53,8 @@ enum
 #define USART_ERROR_ORE     0x00000008U
 #define USART_ERROR_DMA     0x00000010U
 
+#define USART_HAL_DEVS      USART_LL_DEVS
+
 typedef enum
 {
     USART_TX_COMPLETE_CALLBACK,
@@ -66,15 +68,16 @@ typedef enum
 typedef struct s_usart_hal_context_t
 {
     usart_dev_t dev;
+    uint8_t port;
     dma_hal_context_t* tx_dma;
-    const uint8_t* tx_pbuffer;
     dma_hal_context_t* rx_dma;
-    uint8_t* rx_pbuffer;
-    uint32_t error_code;
+    const uint8_t* tx_pbuffer;
+    volatile uint8_t* rx_pbuffer;
     uint16_t tx_buffersize;
-    uint16_t tx_count;
+    volatile uint16_t tx_count;
     uint16_t rx_buffersize;
-    uint16_t rx_count;
+    volatile uint16_t rx_count;
+    volatile uint32_t error_code;
     void (*tx_complete_callback) (struct s_usart_hal_context_t*);
     void (*rx_complete_callback) (struct s_usart_hal_context_t*);
     void (*rx_half_complete_callback) (struct s_usart_hal_context_t*);

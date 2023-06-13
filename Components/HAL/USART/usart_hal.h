@@ -32,6 +32,7 @@ usart_hal_context_t* usart_hal_init(uint8_t usart_id);
  * @param stopbits Number of stop bits (1 or 2)
  * @param parity Parity can be None, Even or Odd. Number of bits specificed in wordlength
  *               includes this parity bit too
+ * @param mode 
  * @return error_t 
  */
 error_t usart_hal_setup(usart_hal_context_t* usart, uint32_t baudrate,

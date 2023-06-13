@@ -1,0 +1,30 @@
+menu "Drivers"
+
+    menu "Serial"
+
+        config SERIAL_PORTS_USE
+            bool "Enable serial ports"
+            default n
+            help
+                Enable UART serial ports
+
+        config SERIAL_TX_BUFFERSIZE
+            depends on SERIAL_PORTS_USE
+            int "Serial Tx queue size"
+            default 128
+            range 64 512
+            help
+                Define maximum number of bytes to queue for transmission
+        
+        config SERIAL_RX_BUFFERSIZE
+            depends on SERIAL_PORTS_USE
+            int "Serial Rx queue size"
+            default 128
+            range 64 512
+            help
+                Define maximum number of unread bytes in rx queu
+
+    endmenu
+
+endmenu
+    

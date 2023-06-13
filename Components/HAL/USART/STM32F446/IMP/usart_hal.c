@@ -64,23 +64,22 @@ static error_t usart_hal_multibuffer_error(usart_hal_context_t* usart);
 
 /* PUBLIC FUNCTIONS */
 
-usart_hal_context_t* usart_hal_init(uint8_t usart_id)
+usart_hal_context_t* usart_hal_init(uint8_t port)
 {
     rcc_hal_context_t rcc;
     gpio_hal_context_t gpio;
     usart_hal_context_t* usart;
 
-    ASSERT(USART_IS_INSTANCE(usart_id));
+    ASSERT(USART_IS_INSTANCE(port));
     
-    usart = &usartx[usart_id];
-
+    usart = &usartx[port];
     memset((void*) usart, 0, sizeof(usart_hal_context_t));
-    USART_HAL_GET_HW(usart, usart_id);
-    ASSERT(usart->dev);
-
+    usart->port = port;
+    USART_HAL_GET_HW(usart, port);
+    
     RCC_HAL_GET_HW(&rcc, RCC);
 
-    if(usart_id == USART1)
+    if(port == USART1)
     {
         GPIO_HAL_GET_HW(&gpio, GPIOA);
         gpio_hal_init(GPIOA);
@@ -89,7 +88,7 @@ usart_hal_context_t* usart_hal_init(uint8_t usart_id)
         rcc_hal_apb2_en_clk(&rcc, RCC_HAL_USART1);
         NVIC_EnableIRQ(USART1_IRQn);
     }
-    else if(usart_id == USART6)
+    else if(port == USART6)
     {
         rcc_hal_apb2_en_clk(&rcc, RCC_HAL_USART6);
     }
@@ -797,8 +796,8 @@ static error_t usart_hal_receive_start_dma(usart_hal_context_t* usart,
 
 static error_t usart_hal_receive_from_isr(usart_hal_context_t* usart)
 {
-    uint16_t* pbuff_16;
-    uint8_t* pbuff_8;
+    volatile uint16_t* pbuff_16;
+    volatile uint8_t* pbuff_8;
     usart_parity_t parity;
     usart_word_length_t wordlength;
 
@@ -851,7 +850,7 @@ static error_t usart_hal_receive_from_isr(usart_hal_context_t* usart)
     {
         if(wordlength == USART_WORDLENGTH_9B && parity == USART_PARITY_NONE)
         {
-            pbuff_16 = (uint16_t*) usart->rx_pbuffer;
+            pbuff_16 = (volatile uint16_t*) usart->rx_pbuffer;
             *pbuff_16 = usart_ll_receive(usart->dev) & 0x01FF;
             usart->rx_pbuffer += 2;
         }
@@ -987,7 +986,8 @@ static void usart_hal_rx_dma_half_complete(dma_hal_context_t* dma)
     ASSERT(dma->parent);
 
     usart_hal_context_t* usart = (usart_hal_context_t*) dma->parent;
-
+    usart->rx_count = dma_hal_get_remaining_items(dma);
+    
     if(usart->rx_half_complete_callback)
     {
         usart->rx_half_complete_callback(usart);
