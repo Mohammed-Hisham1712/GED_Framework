@@ -38,7 +38,7 @@ menu "Utils"
         config PRINTF_SERIAL_PORT
         depends on CUSTOM_PRINTF_USE
         int "Serial port to output printf to"
-        default 1
+        default 0
         help
             Serial port number used as stdout in standard printf
 

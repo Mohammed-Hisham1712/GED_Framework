@@ -7,7 +7,7 @@
 #error No serial port specified to use by putch_
 #endif /* CONFIG_PRINTF_SERIAL_PORT */
 
-void putch_(char ch)
+void putchar_(char ch)
 {
     ASSERT(PUTCH_SERIAL_PORT < SERIAL_PORT_MAX);
     
