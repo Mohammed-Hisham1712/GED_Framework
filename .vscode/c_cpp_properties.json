@@ -21,6 +21,7 @@
                 "${workspaceFolder}/Components/HAL/TIM_BASIC/STM32F446/LL",
                 "${workspaceFolder}/Components/HAL/TIM_BASIC",
                 "${workspaceFolder}/Components/Drivers/TIMER",
+                "${workspaceFolder}/Components/Drivers/Serial"
             ],
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,

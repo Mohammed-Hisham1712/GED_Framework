@@ -1,0 +1,49 @@
+menu "Utils"
+
+    menu "printf"
+
+        config CUSTOM_PRINTF_USE
+            bool "Use custom printf"
+            default y
+            help
+                This compiles and includes printf.c/printf.h custom files
+                This enables use of printf-like functions without heap
+                requirements.
+
+        config ALIAS_STD_FUNCTION_NAMES
+            depends on CUSTOM_PRINTF_USE
+            bool "Use function names as stdio.h stdandard"
+            default n
+            help
+                Enable the use of std C function names such as printf, snprintf
+                instead of printf_ or snprintf_
+
+        config PRINTF_DECIMAL_SPECIFIERS_USE
+            depends on CUSTOM_PRINTF_USE
+            bool "Enable floating point specifiers"
+            default n
+            help
+                Enable the use of %f & %F inside printf-like functions.
+                Warning: Disable if not needed since it consumes large
+                code footprint.
+
+        config CONFIG_PRINTF_EXPONENTIAL_SPECIFIERS_USE
+            depends on PRINTF_DECIMAL_SPECIFIERS_USE
+            bool "Enable exponential notation specifier"
+            default n
+            help
+                Enable the use of %e, %E, %g & %G floating point exponential notation
+                inside printf-like functions.
+        
+        config PRINTF_SERIAL_PORT
+        depends on CUSTOM_PRINTF_USE
+        int "Serial port to output printf to"
+        default 1
+        help
+            Serial port number used as stdout in standard printf
+
+    endmenu
+
+endmenu
+
+                

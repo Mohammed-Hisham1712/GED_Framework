@@ -12,7 +12,8 @@
         "gpio_hal_ext.h": "c",
         "exti_types.h": "c",
         "assert.h": "c",
-        "bit_math.h": "c"
+        "bit_math.h": "c",
+        "serial.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }
