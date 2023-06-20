@@ -9,7 +9,10 @@
 
 void putchar_(char ch)
 {
-    ASSERT(PUTCH_SERIAL_PORT < SERIAL_PORT_MAX);
-    
-    serial_tx(PUTCH_SERIAL_PORT, (const uint8_t*) &ch, sizeof(ch), NULL);
+    uint16_t sent;
+
+    do
+    {
+        serial_tx(PUTCH_SERIAL_PORT, (const uint8_t*) &ch, sizeof(ch), &sent);
+    } while(sent != sizeof(ch));
 }

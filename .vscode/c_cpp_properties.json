@@ -5,6 +5,7 @@
             "includePath": [
                 "${workspaceFolder}/Components/Utils",
                 "${workspaceFolder}/Components/Utils/Bit_Wise",
+                "${workspaceFolder}/Components/Utils/printf",
                 "${workspaceFolder}/Components/HAL/GPIO",
                 "${workspaceFolder}/Components/HAL/GPIO/STM32F446/LL",
                 "${workspaceFolder}/Components/HAL/GPIO/STM32F446/IMP",

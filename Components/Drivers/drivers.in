@@ -26,5 +26,51 @@ menu "Drivers"
 
     endmenu
 
+    menu "Log output"
+        config ENABLE_LOG
+            bool "Enable log output"
+            default n
+            help
+                Defines CONFIG_ENABLE_LOG
+
+        choice LOG_DEFAULT_LEVEL
+            depends on ENABLE_LOG
+            bool "Default log verbosity"
+            default LOG_DEFAULT_LEVEL_INFO
+            help
+                 Specify how much output to see in logs by default.
+        
+        config LOG_DEFAULT_LEVEL_NONE
+            bool "No output"
+        config LOG_DEFAULT_LEVEL_ERROR
+            bool "Error"
+        config LOG_DEFAULT_LEVEL_WARNING
+            bool "Warning"
+        config LOG_DEFAULT_LEVEL_INFO
+            bool "Info"
+        config LOG_DEFAULT_LEVEL_DEBUG
+            bool "Debug"
+        
+        endchoice
+    
+        config LOG_DEFAULT_LEVEL
+            int
+            default 0 if LOG_DEFAULT_LEVEL_NONE
+            default 1 if LOG_DEFAULT_LEVEL_ERROR
+            default 2 if LOG_DEFAULT_LEVEL_WARNING
+            default 3 if LOG_DEFAULT_LEVEL_INFO
+            default 4 if LOG_DEFAULT_LEVEL_DEBUG
+
+        config LOG_COLORS
+            depends on ENABLE_LOG
+            bool "Use ANSI terminal colors in log output"
+            default y
+            help
+                In order to view these, your terminal program must support ANSI color 
+                codes.
+                Defines CONFIG_LOG_COLORS
+        
+    endmenu
+
 endmenu
     
