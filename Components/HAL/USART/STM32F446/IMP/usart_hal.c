@@ -90,7 +90,12 @@ usart_hal_context_t* usart_hal_init(uint8_t port)
     }
     else if(port == USART6)
     {
+        GPIO_HAL_GET_HW(&gpio, GPIOC);
+        gpio_hal_init(GPIOC);
+        gpio_hal_set_mode_alternate_pp(&gpio, GPIO_PIN_6, 8);
+        gpio_hal_set_mode_alternate_pp(&gpio, GPIO_PIN_7, 8);
         rcc_hal_apb2_en_clk(&rcc, RCC_HAL_USART6);
+        NVIC_EnableIRQ(USART6_IRQn);
     }
     else
     {
@@ -172,6 +177,12 @@ error_t usart_hal_tx_dma_setup(usart_hal_context_t* usart, uint8_t dma_circular)
         dma_stream = DMA_STREAM_7;
         dma_channel = DMA_CHANNEL_4;
     }
+    else if(usart->dev == _USART6)
+    {
+        dma_instance = DMA2;
+        dma_stream = DMA_STREAM_6;
+        dma_channel = DMA_CHANNEL_5;
+    }
     else
     {
         return FAILED;
@@ -220,6 +231,12 @@ error_t usart_hal_rx_dma_setup(usart_hal_context_t* usart, uint8_t dma_circular)
         dma_instance = DMA2;
         dma_stream = DMA_STREAM_2;
         dma_channel = DMA_CHANNEL_4;
+    }
+    else if(usart->dev == _USART6)
+    {
+        dma_instance = DMA2;
+        dma_stream = DMA_STREAM_1;
+        dma_channel = DMA_CHANNEL_5;
     }
     else
     {
@@ -1132,10 +1149,25 @@ void usart1_irq_handler(void)
 
 void usart2_irq_handler(void)
 {
-
+    usart_hal_irq_handler(&usartx[USART2]);
 }
 
 void usart3_irq_handler(void)
 {
+    usart_hal_irq_handler(&usartx[USART3]);
+}
 
+void usart4_irq_handler(void)
+{
+    usart_hal_irq_handler(&usartx[USART4]);
+}
+
+void usart5_irq_handler(void)
+{
+    usart_hal_irq_handler(&usartx[USART5]);
+}
+
+void usart6_irq_handler(void)
+{
+    usart_hal_irq_handler(&usartx[USART6]);
 }
