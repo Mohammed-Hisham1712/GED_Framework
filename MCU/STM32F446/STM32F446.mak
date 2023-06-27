@@ -14,7 +14,7 @@ ERASE = $(ST_FLASH) erase
 #MCU specif flags
 CPU = -mcpu=cortex-m4
 FPU = -mfpu=auto
-FLOAT-ABI = -mfloat-abi=soft
+FLOAT-ABI = -mfloat-abi=hard
 THUMB = -mthumb
 
 MCU = $(CPU) $(THUMB) $(FPU) $(FLOAT-ABI)
@@ -51,8 +51,8 @@ endif
 #specify -lgcc as well. This ensures that you have no unresolved references to internal
 #GCC library subroutines.
 
-LIB_C_PATH := "/opt/gcc-arm/arm-none-eabi/lib/thumb/v7-m/nofp"
-LIB_GCC_PATH := "/opt/gcc-arm/lib/gcc/arm-none-eabi/10.3.1/thumb/v7-m/nofp"
+LIB_C_PATH := "/opt/gcc-arm/arm-none-eabi/lib/thumb/v7e-m+fp/hard"
+LIB_GCC_PATH := "/opt/gcc-arm/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard"
 
 LD_LIBS := -nostdlib -specs=nano.specs
 LD_LIBS += -L$(LIB_C_PATH) -lc

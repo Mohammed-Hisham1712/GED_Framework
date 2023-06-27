@@ -3,6 +3,7 @@
         {
             "name": "Linux",
             "includePath": [
+                "${workspaceFolder}/Components/RTOS/FreeRTOS/include",
                 "${workspaceFolder}/Components/Utils",
                 "${workspaceFolder}/Components/Utils/Bit_Wise",
                 "${workspaceFolder}/Components/Utils/printf",

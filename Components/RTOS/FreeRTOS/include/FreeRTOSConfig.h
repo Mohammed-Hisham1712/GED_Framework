@@ -16,7 +16,7 @@
 #define configUSE_PREEMPTION                    1			/* Runs the scheduler every tick interrupt */
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION 0
 #define configCPU_CLOCK_HZ                     	16000000U		/* Clock tick feeding the RTOS timer */
-#define configTICK_RATE_HZ                 	(TickType_t) 1000	/* Tick interrupt frequency, should be <= 1000hz */
+#define configTICK_RATE_HZ                 	    (TickType_t) 1000	/* Tick interrupt frequency, should be <= 1000hz */
 #define configMAX_PRIORITIES                    7
 #define configMINIMAL_STACK_SIZE                128
 #define configMAX_TASK_NAME_LEN                 16
@@ -55,7 +55,7 @@
 #define configMAX_CO_ROUTINE_PRIORITIES         1
 
 /* Software timer related definitions. */
-#define configUSE_TIMERS                        1
+#define configUSE_TIMERS                        0
 #define configTIMER_TASK_PRIORITY               2
 #define configTIMER_QUEUE_LENGTH                10
 #define configTIMER_TASK_STACK_DEPTH            ( configMINIMAL_STACK_SIZE * 4 )
@@ -98,9 +98,9 @@ to exclude the API function. */
 
 /* Definitions that map the FreeRTOS port interrupt handlers to their CMSIS
 standard names - or at least those used in the unmodified vector table. */
-#define vPortSVCHandler     SVC_Handler
-#define xPortPendSVHandler  PendSV_Handler
-#define xPortSysTickHandler SysTick_Handler
+#define vPortSVCHandler     svc_handler
+#define xPortPendSVHandler  pendsv_handler
+#define xPortSysTickHandler systick_handler
 
 /* Dynamic Memory Allocation Schemes */
 #define HEAP_ALLOCATION_TYPE1                   (1)     /* heap_1.c*/

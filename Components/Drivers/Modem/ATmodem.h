@@ -5,7 +5,18 @@
 #include "serial.h"
 #include "timer.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
+
 #include <stdint.h>
+
+#define ATMODEM_DEFAULT_BAUDRATE            9600
+
+#define ATMODEM_DEFAULT_TSK_STACK_SIZE      CONFIG_ATMODEM_DEFAULT_TSK_STACK_SIZE
+#define ATMODEM_DEFAULT_TSK_PRIORITY        CONFIG_ATMODEM_DEFAULT_TSK_PRIORITY
+#define ATMODEM_DEFAULT_TSK_PERIOD          50
+
 
 #define ATMODEM_PREFIX      "AT"
 
@@ -101,11 +112,6 @@ typedef enum
     ATMODEM_RETVAL_TX_FAILED,
 } atmodem_retval_t;
 
-enum
-{
-    ATMODEM_MODEM_GSM = 0,
-    ATMODEM_MODEM_MAX,
-};
 
 typedef error_t (*atmodem_cmd_resp_callback_t)  (atmodem_rescode_t, const char*, uint8_t);
 
@@ -113,20 +119,42 @@ typedef struct
 {
     uint8_t                     rx_buffer[ATMODEM_RECV_BUFFER_SIZE];
     atmodem_cmd_resp_callback_t cmd_callback;
+    TaskHandle_t                tsk_handle;
     ms_timer_t                  cmd_timer;
+    ms_timer_t                  interoctet_resp_timer;
+    SemaphoreHandle_t           cmd_semaphore;
     uint16_t                    cmd_timeout;
     uint16_t                    rx_consumed;
     uint8_t                     status;
     uint8_t                     state;
     uint8_t                     rx_state;
     uint8_t                     serial_port;
+    uint8_t                     tsk_period;
 } atmodem_layer_t;
 
 typedef struct
 {
     uint8_t serial_port;
     serial_config_t serial_config;
+    uint16_t tsk_stack_size;
+    uint8_t tsk_priority;
+    uint8_t tsk_period;         /* <tsk_period> Should be calculated to be less than 
+                                    the time taken to fill the UART Rx queue, otherwise
+                                    some data will be missing 
+                                */
 } atmodem_config_t;
+
+#define ATMODEM_DEFAULT_CONFIG(port_num)    \
+    {                                   \
+        .serial_port = port_num,        \
+        .serial_config.baudrate = ATMODEM_DEFAULT_BAUDRATE, \
+        .serial_config.data_bits = SERIAL_DATA_BITS_8,  \
+        .serial_config.stop_bits = SERIAL_STOP_BITS_1,  \
+        .serial_config.parity = SERIAL_PARITY_NONE,  \
+        .tsk_stack_size = ATMODEM_DEFAULT_TSK_STACK_SIZE,    \
+        .tsk_priority = ATMODEM_DEFAULT_TSK_PRIORITY,    \
+        .tsk_period = ATMODEM_DEFAULT_TSK_PERIOD,    \
+    }
 
 /**
  * @brief 
@@ -150,6 +178,16 @@ typedef struct
 
 
 /**
+ * @brief 
+ * 
+ * @param p_modem 
+ * @param p_config 
+ * @return atmodem_retval_t
+ */
+atmodem_retval_t atmodem_init(atmodem_layer_t* p_modem, const atmodem_config_t* p_config);
+
+
+/**
  * @brief Send an AT command to DCE according to V.25ter specification
  *        Command can be in basic, S-parameter or extended format.
  *        The function will add the prefix 'AT' as well as the trailer '\cr'.
@@ -165,4 +203,14 @@ atmodem_retval_t atmodem_send_command(atmodem_layer_t* p_modem,
                                                 const atmodem_cmd_desc_t* p_cmd_desc);
 
 
+/**
+ * @brief 
+ * 
+ * @param p_modem 
+ * @param p_cmd 
+ * @param timeout 
+ * @return atmodem_retval_t 
+ */
+atmodem_retval_t atmodem_send_command_wait(atmodem_layer_t* p_modem, 
+                                    const atmodem_cmd_desc_t* p_cmd, uint32_t timeout);
 #endif

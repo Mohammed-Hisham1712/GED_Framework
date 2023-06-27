@@ -72,5 +72,33 @@ menu "Drivers"
         
     endmenu
 
+    menu "ATmodem"
+    
+        config ATMODEM_USE
+        bool "Enable ATmodem layer"
+        default n
+        help
+            Defines CONFIG_ATMODEM_USE
+
+        config ATMODEM_DEFAULT_TSK_STACK_SIZE
+        depends on ATMODEM_USE
+        int "ATModem default task stack size"
+        range 512 8192
+        default 512
+        help
+            Set the default stack size for ATmodem RTOS task.
+            Stack size can be customized in run-time also.
+        
+        config ATMODEM_DEFAULT_TSK_PRIORITY
+        depends on ATMODEM_USE
+        int "ATmodem default task priority"
+        range 0 15
+        default 1
+        help
+            Set the default task priority for ATmodem RTOS task.
+            priority can be customized in run-time also.
+
+    endmenu
+
 endmenu
     

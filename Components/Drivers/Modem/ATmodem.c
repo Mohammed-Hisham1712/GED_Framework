@@ -4,6 +4,10 @@
 #include "log.h"
 #include "assert.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
+
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
@@ -25,31 +29,8 @@
 #define ATMODEM_CMD_MAX_SIZE        64
 #define ATMODEM_RESP_MAX_SIZE       32
 
-static atmodem_layer_t modems[ATMODEM_MODEM_MAX];
 
-
-atmodem_layer_t* atmodem_init(uint8_t modem, const atmodem_config_t* p_config)
-{
-    atmodem_layer_t* p_layer;
-
-    ASSERT(ATMODEM_IS_MODEM(modem));
-    ASSERT(p_config);
-
-    p_layer = &modems[modem];
-
-    memset((void*) p_layer, 0, sizeof(atmodem_layer_t));
-
-    if(serial_setup(p_config->serial_port, &p_config->serial_config) != OK)
-    {
-        return NULL;
-    }
-
-    p_layer->serial_port = p_config->serial_port;
-
-    LOGD(ATMODEM_TAG, "Init done");
-
-    return p_layer;
-}
+#define INTEROCTET_RESP_TIMEOUT     100
 
 /**
  * @brief Convert the string recieved as a response result code to a 
@@ -116,7 +97,7 @@ static atmodem_rescode_t atmodem_get_rescode(const char* ans, uint8_t ans_size)
     else
     {
         rescode = ATMODEM_RESCODE_NOT_RECOGNIZED;
-        LOGD(ATMODEM_TAG, "RESCODE_NO_RECOGNIZED");
+        LOGD(ATMODEM_TAG, "RESCODE_NOT_RECOGNIZED");
     }
 
     return rescode;
@@ -140,6 +121,8 @@ static atmodem_retval_t atmodem_process_cmd_resp(atmodem_layer_t* p_modem, char 
 
     rescode = ATMODEM_RESCODE_NONE;
     l_ret = ATMODEM_RETVAL_FAILED;
+
+    timer_start(&p_modem->interoctet_resp_timer);
 
     switch(p_modem->rx_state)
     {
@@ -199,22 +182,24 @@ static atmodem_retval_t atmodem_process_cmd_resp(atmodem_layer_t* p_modem, char 
         case ATMODEM_RX_STATE_TRAILER_LF:
             if(ATMODEM_LF == recv)
             {
+                timer_clear(&p_modem->interoctet_resp_timer);
+
                 p_modem->rx_state = ATMODEM_RX_STATE_HEADER_CR;
                 p_modem->rx_buffer[p_modem->rx_consumed++] = '\0';
+
+                LOGI(ATMODEM_TAG, "[RECV] %s", p_modem->rx_buffer);
 
                 rescode = atmodem_get_rescode((const char*) p_modem->rx_buffer, 
                                                             p_modem->rx_consumed);
                 
                 if(p_modem->status & ATMODEM_STATUS_CMD_BUSY)
                 {
-                    LOGI(ATMODEM_TAG, "[RECV] %s", p_modem->rx_buffer);
-
                     if(p_modem->cmd_callback)
                     {
                         if(p_modem->cmd_callback(rescode, 
                             (const char*)p_modem->rx_buffer, p_modem->rx_consumed) != OK)
                         {
-                            ATMODEM_LOGE(ATMODEM_TAG, "Response to cmd failed!");
+                            ATMODEM_LOGE("Response to cmd failed!");
                         }
                     }
                 }
@@ -228,13 +213,14 @@ static atmodem_retval_t atmodem_process_cmd_resp(atmodem_layer_t* p_modem, char 
                 switch(rescode)
                 {
                     case ATMODEM_RESCODE_OK:
-                        p_modem->status &= ~ATMODEM_STATUS_CMD_BUSY;
-                        break;
                     case ATMODEM_RESCODE_ERROR:
-                        p_modem->status &= ~ATMODEM_STATUS_CMD_BUSY;
-                        break;
                     case ATMODEM_RESCODE_CME_ERROR:
                         p_modem->status &= ~ATMODEM_STATUS_CMD_BUSY;
+                        if(p_modem->cmd_semaphore)
+                        {
+                            xSemaphoreGive(p_modem->cmd_semaphore);
+                        }
+                        timer_clear(&p_modem->cmd_timer);
                         break;
                     default:
                         break;
@@ -320,12 +306,30 @@ static atmodem_retval_t atmodem_rx(atmodem_layer_t* p_modem)
     return ATMODEM_RETVAL_SUCCESS;
 }
 
+error_t atmodem_abort_command(atmodem_layer_t* p_modem)
+{
+    ASSERT(p_modem);
+
+    timer_clear(&p_modem->interoctet_resp_timer);
+    timer_clear(&p_modem->cmd_timer);
+                    
+    p_modem->rx_state = ATMODEM_RX_STATE_HEADER_CR;
+    p_modem->status &= ~ATMODEM_STATUS_CMD_BUSY;
+
+    if(p_modem->cmd_semaphore)
+    {
+        xSemaphoreGive(p_modem->cmd_semaphore);
+    }
+
+    return ATMODEM_RETVAL_SUCCESS;
+}
+
 /**
  * @brief 
  * 
  * @param args 
  */
-static void atmodem_process(void* args)
+static void atmodem_tsk_handler(void* args)
 {
     atmodem_layer_t* p_modem;
 
@@ -338,10 +342,21 @@ static void atmodem_process(void* args)
         switch(p_modem->state)
         {
             case ATMODEM_STATE_CMD_OFFLINE:
-                if(atmodem_rx(p_modem) != ATMODEM_RETVAL_SUCCESS)
+                if(timer_elapsed(&p_modem->interoctet_resp_timer) > 
+                                                    INTEROCTET_RESP_TIMEOUT)
                 {
-                    break;
+                    atmodem_abort_command(p_modem);
+                    ATMODEM_LOGW("Inter-octet timer timeout");
                 }
+
+                if((p_modem->cmd_timeout > 0) && 
+                            timer_elapsed(&p_modem->cmd_timer) > p_modem->cmd_timeout)
+                {
+                    atmodem_abort_command(p_modem);
+                    ATMODEM_LOGW("CMD response timed out");
+                }
+
+                atmodem_rx(p_modem);
                 break;
             case ATMODEM_STATE_CMD_ONLINE:
                 break;
@@ -350,7 +365,62 @@ static void atmodem_process(void* args)
             default:
                 break;
         }
+
+        vTaskDelay(pdMS_TO_TICKS(p_modem->tsk_period));
     }
+
+    vTaskDelete(NULL);
+}
+
+atmodem_retval_t atmodem_init(atmodem_layer_t* p_modem, const atmodem_config_t* p_config)
+{
+    BaseType_t ret;
+
+    ASSERT(p_modem);
+    ASSERT(p_config);
+
+    memset((void*) p_modem, 0, sizeof(atmodem_layer_t));
+
+    if(serial_setup(p_config->serial_port, &p_config->serial_config) != OK)
+    {
+        ATMODEM_LOGE("Init failed");
+        return ATMODEM_RETVAL_FAILED;
+    }
+
+    p_modem->serial_port = p_config->serial_port;
+    p_modem->tsk_period = p_config->tsk_period;
+    vSemaphoreCreateBinary(p_modem->cmd_semaphore);
+    
+    if(p_modem->cmd_semaphore == NULL)
+    {
+        return ATMODEM_RETVAL_FAILED;
+    }
+    
+    ret = xTaskCreate(atmodem_tsk_handler, "atmodem_task", 
+                                        p_config->tsk_stack_size,
+                                        p_modem,
+                                        p_config->tsk_priority,
+                                        &p_modem->tsk_handle);
+    if(ret != pdPASS)
+    {
+        return ATMODEM_RETVAL_FAILED;
+    }
+
+    LOGD(ATMODEM_TAG, "Init done");
+
+    return ATMODEM_RETVAL_SUCCESS;
+}
+
+atmodem_retval_t atmodem_deinit(atmodem_layer_t* p_modem)
+{
+    vTaskDelete(p_modem->tsk_handle);
+    
+    if(p_modem->cmd_semaphore)
+    {
+        vSemaphoreDelete(p_modem->cmd_semaphore);
+    }
+
+    return ATMODEM_RETVAL_SUCCESS;
 }
 
 atmodem_retval_t atmodem_send_command(atmodem_layer_t* p_modem, 
@@ -372,7 +442,7 @@ atmodem_retval_t atmodem_send_command(atmodem_layer_t* p_modem,
         ATMODEM_LOGE("DCE is not in command state");
         return ATMODEM_RETVAL_WRONG_STATE;
     }
-    if(p_modem & ATMODEM_STATUS_CMD_BUSY)
+    if(p_modem->status & ATMODEM_STATUS_CMD_BUSY)
     {
         ATMODEM_LOGE("Another command is in progress");
         return ATMODEM_RETVAL_BUSY;
@@ -411,12 +481,39 @@ atmodem_retval_t atmodem_send_command(atmodem_layer_t* p_modem,
 
     LOGI(ATMODEM_TAG, "[SENDING] %s", at_cmd);
 
-    if(atmodem_tx(p_modem, at_cmd, to_send) != ATMODEM_RETVAL_SUCCESS)
+    if(atmodem_tx(p_modem, (const uint8_t*) at_cmd, to_send) != ATMODEM_RETVAL_SUCCESS)
     {
         ATMODEM_LOGE("Tx failed");
         return ATMODEM_RETVAL_TX_FAILED;
     }
 
+    if(p_modem->cmd_timeout > 0)
+    {
+        timer_start(&p_modem->cmd_timer);
+    }
+
     return ATMODEM_RETVAL_SUCCESS;
+}
+
+atmodem_retval_t atmodem_send_command_wait(atmodem_layer_t* p_modem, 
+                                    const atmodem_cmd_desc_t* p_cmd, uint32_t timeout)
+{
+    BaseType_t ret;
+
+    if(p_modem->cmd_semaphore)
+    {
+        ret = xSemaphoreTake(p_modem->cmd_semaphore, timeout);
+
+        if(ret != pdTRUE)
+        {
+            ATMODEM_LOGW("Failed to take semaphore");
+        }
+    }
+    else
+    {
+        return ATMODEM_RETVAL_FAILED;
+    }
+    
+    return atmodem_send_command(p_modem, p_cmd);
 }
 
