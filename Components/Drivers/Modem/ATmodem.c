@@ -197,7 +197,7 @@ static atmodem_retval_t atmodem_process_cmd_resp(atmodem_layer_t* p_modem, char 
                     if(p_modem->cmd_callback)
                     {
                         if(p_modem->cmd_callback(rescode, 
-                            (const char*)p_modem->rx_buffer, p_modem->cmd_args) != OK)
+                            (const char*)p_modem->rx_buffer, p_modem->args) != OK)
                         {
                             ATMODEM_LOGE("Response to cmd failed!");
                         }
@@ -205,9 +205,14 @@ static atmodem_retval_t atmodem_process_cmd_resp(atmodem_layer_t* p_modem, char 
                 }
                 else
                 {
-                    /*
-                    * TODO: Handle unsco rescode
-                    */
+                    if(p_modem->unsco_callback)
+                    {
+                        if(p_modem->unsco_callback(rescode, 
+                                (const char*) p_modem->rx_buffer, p_modem->args) != OK)
+                        {
+                            ATMODEM_LOGE("Unsolicited callback failed!");
+                        }
+                    }
                 }
 
                 switch(rescode)
@@ -475,7 +480,6 @@ atmodem_retval_t atmodem_send_command(atmodem_layer_t* p_modem,
     }
     
     p_modem->cmd_callback = p_cmd_desc->resp_callback;
-    p_modem->cmd_args = p_cmd_desc->args;
     p_modem->cmd_timeout = p_cmd_desc->timeout_ms;
     p_modem->status |= ATMODEM_STATUS_CMD_BUSY;
     to_send = p_dest - at_cmd;

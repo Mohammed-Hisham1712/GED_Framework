@@ -13,7 +13,8 @@
 #define GSM_DCE_REVISION_MAX_SIZE           48
 #define GSM_DCE_IMEI_SIZE                   15
 #define GSM_DCE_IMSI_SIZE                   15
-
+#define GSM_CELL_LAC_SIZE                   4
+#define GSM_CELL_ID_SIZE                    4
 
 #define GSM_DCE_DEFAULT_CMD_TIMEOUT     300
 
@@ -28,11 +29,14 @@
 #define GSM_CMD_CREG_ENABLED_WITH_LOC   "+CREG=2"
 
 
+#define GSM_UNSO_CREG                   "+CREG: "
+
 typedef enum
 {
     GSM_MODEM_NOT_REGISTERED_NOT_SEARCHING=0,
     GSM_MODEM_REGISTERED_HOME_NETWORK,
     GSM_MODEM_NOT_REGISTERED_SEARCHING,
+    GSM_MODEM_REGISTERATION_DENIED,
     GSM_MODEM_REGISTERATION_UNKOWN,
     GSM_MODEM_REGISTERED_ROAMING,
     GSM_MODEM_REGISTERATION_INVALID,
@@ -47,8 +51,8 @@ enum
 
 typedef struct
 {
-    char        cell_lac[4];
-    char        cell_id[8];
+    char        cell_lac[GSM_CELL_LAC_SIZE + 1];
+    char        cell_id[GSM_CELL_ID_SIZE + 1];
     uint8_t     reg_status;     
 } gsm_modem_cs_net_info_t;
 
