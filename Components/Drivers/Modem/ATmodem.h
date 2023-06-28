@@ -113,12 +113,13 @@ typedef enum
 } atmodem_retval_t;
 
 
-typedef error_t (*atmodem_cmd_resp_callback_t)  (atmodem_rescode_t, const char*, uint8_t);
+typedef error_t (*atmodem_cmd_resp_callback_t)  (atmodem_rescode_t, const char*, void*);
 
 typedef struct
 {
     uint8_t                     rx_buffer[ATMODEM_RECV_BUFFER_SIZE];
     atmodem_cmd_resp_callback_t cmd_callback;
+    void*                       cmd_args;
     TaskHandle_t                tsk_handle;
     ms_timer_t                  cmd_timer;
     ms_timer_t                  interoctet_resp_timer;
@@ -171,6 +172,7 @@ typedef struct
 {
     const char*                 cmd;
     atmodem_cmd_resp_callback_t resp_callback;
+    void*                       args;
     uint16_t                    timeout_ms;
     uint16_t                    cmd_size;
 } atmodem_cmd_desc_t;
