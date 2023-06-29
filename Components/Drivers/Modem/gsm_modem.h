@@ -15,8 +15,12 @@
 #define GSM_DCE_IMSI_SIZE                   15
 #define GSM_CELL_LAC_SIZE                   4
 #define GSM_CELL_ID_SIZE                    4
+#define GSM_OP_LONG_MAX_SIZE                16
+#define GSM_OP_SHORT_MAX_SIZE               8
+#define GSM_OP_NUMERIC_SIZE                 5
 
 #define GSM_DCE_DEFAULT_CMD_TIMEOUT     300
+#define GSM_DCE_OP_SELECTION_TIMEOUT    3000
 
 #define GSM_CMD_GET_MANUFACTURER        "+CGMI"
 #define GSM_CMD_GET_MODEL_NAME          "+CGMM"
@@ -27,6 +31,13 @@
 #define GSM_CMD_CREG_DISABLED           "+CREG=0"
 #define GSM_CMD_CREG_ENABLED            "+CREG=1"
 #define GSM_CMD_CREG_ENABLED_WITH_LOC   "+CREG=2"
+
+#define GSM_CMD_OP_FORMAT_LONG          "+COPS=3,0"
+#define GSM_CMD_OP_FORMAT_SHORT         "+COPS=3,1"
+#define GSM_CMD_OP_FORMAT_NUMERIC       "+COPS=3,2"
+#define GSM_CMD_OP_SELECTION            "+COPS=%u,%u,\"%s\""
+#define GSM_CMD_OP_SELECTION_NO_OP      "+COPS=%u,%u"
+#define GSM_CMD_OP_GET                  "+COPS?"
 
 
 #define GSM_UNSO_CREG                   "+CREG: "
@@ -49,11 +60,52 @@ enum
     GSM_MODEM_NETWORK_REGISTERATION_UNSO_RESCODE_WITH_LOC,
 };
 
+typedef enum
+{
+    GSM_MODEM_OP_FORMAT_LONG,
+    GSM_MODEM_OP_FORMAT_SHORT,
+    GSM_MODEM_OP_FORMAT_NUMERIC,
+    GSM_MODEM_OP_FORMAT_INVALID
+} gsm_modem_op_format_t;
+
+typedef enum
+{
+    GSM_MODEM_OP_SELECTION_AUTO,
+    GSM_MODEM_OP_SELECTION_MANUAL,
+    GSM_MODEM_OP_SELECTION_DEREGISTER,
+    GSM_MOEDM_OP_SELECTION_FORMAT,
+    GSM_MODEM_OP_SELECTION_AUTO_MANUAL,
+    GSM_MODEM_OP_SELECTION_INVALID,
+} gsm_modem_op_selection_t;
+
+typedef enum
+{
+    GSM_MODEM_OP_STATUS_UNKOWN,
+    GSM_MODEM_OP_STATUS_AVAILABLE,
+    GSM_MODEM_OP_STATUS_CURRENT,
+    GSM_MODEM_OP_STATUS_FORBIDDEN,
+    GSM_MODEM_OP_STATUS_MAX,
+} gsm_modem_op_status_t;
+
 typedef struct
 {
-    char        cell_lac[GSM_CELL_LAC_SIZE + 1];
-    char        cell_id[GSM_CELL_ID_SIZE + 1];
-    uint8_t     reg_status;     
+    uint8_t status;
+    uint8_t mode;
+    uint8_t format;
+    union
+    {
+        char operator_long[GSM_OP_LONG_MAX_SIZE + 1];
+        char operator_short[GSM_OP_SHORT_MAX_SIZE + 1];
+        char operator_num[GSM_OP_NUMERIC_SIZE + 1];
+    } operator;
+} gsm_modem_operator_t;
+
+typedef struct
+{
+    gsm_modem_operator_t    operator;
+    char                    cell_lac[GSM_CELL_LAC_SIZE + 1];
+    char                    cell_id[GSM_CELL_ID_SIZE + 1];
+    uint8_t                 reg_status;     
 } gsm_modem_cs_net_info_t;
 
 

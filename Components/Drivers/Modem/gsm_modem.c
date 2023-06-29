@@ -4,6 +4,7 @@
 #include "types.h"
 #include "assert.h"
 #include "log.h"
+#include "stdio_public.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -27,7 +28,19 @@
 #endif  /* GSM_MODEM_LOG_VERBOSITY_SUPRESS */
 
 
-
+/**
+ * @brief Copy a specific parameter given in DCE responses to \p pdest
+ * 
+ * @param resp Response returned from DCE. Should be in the format 
+ *              +RESP: <param0>, <param1>, ..., <paramn>
+ * @param pdest Buffer to copy to the specific parameter refered to by \p param_id
+ *              A null byte is always inserted at the end of the copied data
+ * @param dest_size Size of \p pdest including null byte.
+ * @param param_id Parameter posision in \p resp starting from 0. If the specified 
+ *                 parameter is double quoted, the qoutes are removed.
+ * @return int Number of characters copied from \p resp to \p pdest not counting
+ *         the null byte.
+ */
 static int gsm_modem_get_resp_param(const char* resp, char* pdest, 
                                                 uint8_t dest_size, uint8_t param_id)
 {
@@ -202,7 +215,7 @@ static error_t gsm_modem_handle_default(atmodem_rescode_t rescode,
 
     (void) args;
     l_ret = OK;
-    
+
     switch(rescode)
     {
         case ATMODEM_RESCODE_OK:
@@ -391,6 +404,98 @@ static error_t gsm_modem_handle_cimi(atmodem_rescode_t rescode,
     return l_ret;
 }
 
+static error_t gsm_modem_handle_cops(atmodem_rescode_t rescode, 
+                                            const char* resp, void* args)
+{
+    char param[GSM_OP_LONG_MAX_SIZE + 1];
+    gsm_modem_t* p_gsm_modem;
+    gsm_modem_operator_t* p_operator;
+
+    ASSERT(resp);
+    ASSERT(args);
+
+    p_gsm_modem = (gsm_modem_t*) args;
+    p_operator = &p_gsm_modem->cs_network_info.operator;
+
+    switch(rescode)
+    {
+        case ATMODEM_RESCODE_NOT_RECOGNIZED:
+            if(gsm_modem_get_resp_param(resp, param, sizeof(param), 0) == 1)
+            {
+                LOGD(GSM_MODEM_TAG, "Operator mode: %c", param[0]);
+                if((p_operator->mode = strtol(param, NULL, 10)) >= 
+                                                    GSM_MODEM_OP_SELECTION_INVALID)
+                {
+                    p_operator->mode = GSM_MODEM_OP_SELECTION_INVALID;
+                    GSM_MODEM_LOGE("+COPS: Invalid selection mode!");
+                    return FAILED;
+                }
+            }
+            else
+            {
+                GSM_MODEM_LOGE("Failed to get network status!");
+                return FAILED;
+            }
+
+            if(gsm_modem_get_resp_param(resp, param, sizeof(param), 1) == 1)
+            {
+                LOGD(GSM_MODEM_TAG, "Operator format: %c", param[0]);
+                if((p_operator->format = strtol(param, NULL, 10)) >= 
+                                                        GSM_MODEM_OP_FORMAT_INVALID)
+                {
+                    p_operator->format = GSM_MODEM_OP_FORMAT_INVALID;
+                    GSM_MODEM_LOGE("+COPS: Invalid format!");
+                    return FAILED;
+                }
+            }
+            else
+            {
+                LOGD(GSM_MODEM_TAG, "No operators available");
+                p_operator->status = GSM_MODEM_OP_STATUS_UNKOWN;
+                return OK;    
+            }
+
+            if(gsm_modem_get_resp_param(resp, param, sizeof(param), 2) > 0)
+            {
+                LOGD(GSM_MODEM_TAG, "Operator: %s", param);
+                p_operator->status = GSM_MODEM_OP_STATUS_CURRENT;
+
+                switch(p_operator->format)
+                {
+                    case GSM_MODEM_OP_FORMAT_LONG:
+                        strncpy(p_operator->operator.operator_long, param, 
+                                            sizeof(p_operator->operator.operator_long));
+                        break;
+                    case GSM_MODEM_OP_FORMAT_SHORT:
+                        strncpy(p_operator->operator.operator_short, param, 
+                                            sizeof(p_operator->operator.operator_short));
+                        break;
+                    case GSM_MODEM_OP_FORMAT_NUMERIC:
+                        strncpy(p_operator->operator.operator_num, param, 
+                                            sizeof(p_operator->operator.operator_num));
+                        break;
+                    default:
+                        break;
+                }
+            }
+            else
+            {
+                GSM_MODEM_LOGE("Failed to get operator name!");
+                return FAILED;
+            }
+            break;
+        case ATMODEM_RESCODE_OK:
+            break;
+        case ATMODEM_RESCODE_ERROR:
+            GSM_MODEM_LOGE("+COPS response failed!");
+            break;
+        default:
+            break;
+    }
+
+    return OK;
+}
+
 error_t gsm_modem_get_dce_manufacturer(gsm_modem_t* p_gsm_modem)
 {
     atmodem_cmd_desc_t cmd_desc;
@@ -504,6 +609,7 @@ error_t gsm_modem_set_network_registeration_result_code
     atmodem_cmd_desc_t cmd_desc;
 
     ASSERT(p_gsm_modem);
+    ASSERT(verbosity <= GSM_MODEM_NETWORK_REGISTERATION_UNSO_RESCODE_WITH_LOC);
 
     cmd_desc.resp_callback = &gsm_modem_handle_default;
     cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
@@ -520,8 +626,6 @@ error_t gsm_modem_set_network_registeration_result_code
         case GSM_MODEM_NETWORK_REGISTERATION_UNSO_RESCODE_WITH_LOC:
             cmd_desc.cmd = GSM_CMD_CREG_ENABLED_WITH_LOC;
             break;
-        default:
-            return FAILED;
     }
 
     if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
@@ -534,11 +638,151 @@ error_t gsm_modem_set_network_registeration_result_code
     return OK;
 }
 
+error_t gsm_modem_select_operator_format(gsm_modem_t* p_gsm_modem, 
+                                                    gsm_modem_op_format_t format)
+{
+    atmodem_cmd_desc_t cmd_desc;
+
+    ASSERT(p_gsm_modem);
+    ASSERT(format < GSM_MODEM_OP_FORMAT_INVALID);
+
+    cmd_desc.resp_callback = &gsm_modem_handle_default;
+    cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+    cmd_desc.cmd_size = 0;
+
+    switch (format)
+    {
+        case GSM_MODEM_OP_FORMAT_LONG:
+            cmd_desc.cmd = GSM_CMD_OP_FORMAT_LONG;
+            break;
+        case GSM_MODEM_OP_FORMAT_SHORT:
+            cmd_desc.cmd = GSM_CMD_OP_FORMAT_SHORT;
+            break;
+        case GSM_MODEM_OP_FORMAT_NUMERIC:
+            cmd_desc.cmd = GSM_CMD_OP_FORMAT_NUMERIC;
+            break;
+        default:
+            return FAILED;
+    }
+
+    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
+                                                    != ATMODEM_RETVAL_SUCCESS)
+    {
+        GSM_MODEM_LOGE("+COPS send failed!");
+        return FAILED;
+    }
+
+    return OK;
+}
+
+error_t gsm_modem_select_operator(gsm_modem_t* p_gsm_modem, 
+                            gsm_modem_op_selection_t mode, const char* operator)
+{
+    char cmd_str[32];
+    atmodem_cmd_desc_t cmd_desc;
+    uint8_t fmt;
+
+    ASSERT(p_gsm_modem);
+    ASSERT(mode != GSM_MOEDM_OP_SELECTION_FORMAT);
+    ASSERT(mode < GSM_MODEM_OP_SELECTION_INVALID);
+
+    fmt = p_gsm_modem->cs_network_info.operator.format;
+
+    cmd_desc.resp_callback = &gsm_modem_handle_default;
+    cmd_desc.timeout_ms = GSM_DCE_OP_SELECTION_TIMEOUT;
+
+    switch(mode)
+    {
+        case GSM_MODEM_OP_SELECTION_AUTO:
+        case GSM_MODEM_OP_SELECTION_DEREGISTER:
+            cmd_desc.cmd_size = snprintf_(cmd_str, sizeof(cmd_str), 
+                                                GSM_CMD_OP_SELECTION_NO_OP, mode, fmt);
+            if(cmd_desc.cmd_size >= sizeof(cmd_str))
+            {
+                GSM_MODEM_LOGE("cmd buffer is insufficient!");
+                return FAILED;
+            }
+            break;
+        case GSM_MODEM_OP_SELECTION_MANUAL:
+        case GSM_MODEM_OP_SELECTION_AUTO_MANUAL:
+            if(operator)
+            {
+                cmd_desc.cmd_size = snprintf_(cmd_str, sizeof(cmd_str),
+                                            GSM_CMD_OP_SELECTION, mode, fmt, operator);
+                if(cmd_desc.cmd_size >= sizeof(cmd_str))
+                {
+                    GSM_MODEM_LOGE("cmd buffer is insufficient!");
+                    return FAILED;
+                }
+            }
+            else
+            {
+                GSM_MODEM_LOGE("Operator is NULL");
+                return FAILED;
+            }
+            break;
+        default:
+            return FAILED;
+    }
+
+    cmd_desc.cmd = cmd_str;
+    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
+                                                    != ATMODEM_RETVAL_SUCCESS)
+    {
+        GSM_MODEM_LOGE("+COPS send failed!");
+        return FAILED;
+    }
+
+    return OK;
+}
+
+error_t gsm_modem_get_operator(gsm_modem_t* p_gsm_modem)
+{
+    atmodem_cmd_desc_t cmd_desc;
+
+    ASSERT(p_gsm_modem);
+
+    cmd_desc.cmd = GSM_CMD_OP_GET;
+    cmd_desc.resp_callback = &gsm_modem_handle_cops;
+    cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+    cmd_desc.cmd_size = 0;
+
+    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
+                                                    != ATMODEM_RETVAL_SUCCESS)
+    {
+        GSM_MODEM_LOGE("+COPS? send failed!");
+        return FAILED;
+    }
+
+    return OK;
+}
+
+error_t gsm_modem_sync(gsm_modem_t* p_gsm_modem)
+{
+    atmodem_cmd_desc_t cmd_desc;
+
+    cmd_desc.cmd = "";
+    cmd_desc.cmd_size = 0;
+    cmd_desc.resp_callback = NULL;
+    cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+
+    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
+                                                    != ATMODEM_RETVAL_SUCCESS)
+    {
+        GSM_MODEM_LOGE("AT send failed!");
+        return FAILED;
+    }
+
+    return OK;
+}
+
 error_t gsm_modem_init(gsm_modem_t* p_gsm_modem, const atmodem_config_t* p_dte_config)
 {
     error_t l_ret;
 
     ASSERT(p_gsm_modem);
+
+    memset(p_gsm_modem, 0, sizeof(gsm_modem_t));
 
     if(atmodem_init(&p_gsm_modem->dte_layer, p_dte_config) != ATMODEM_RETVAL_SUCCESS)
     {
@@ -568,13 +812,29 @@ error_t gsm_modem_init(gsm_modem_t* p_gsm_modem, const atmodem_config_t* p_dte_c
         return FAILED;
     }
 
-    if(gsm_modem_get_dce_imsi(p_gsm_modem) != OK)
+    if(gsm_modem_set_network_registeration_result_code(p_gsm_modem, 
+                        GSM_MODEM_NETWORK_REGISTERATION_UNSO_RESCODE_WITH_LOC) != OK)
     {
         return FAILED;
     }
 
-    if(gsm_modem_set_network_registeration_result_code(p_gsm_modem, 
-                        GSM_MODEM_NETWORK_REGISTERATION_UNSO_RESCODE_WITH_LOC) != OK)
+    if(gsm_modem_select_operator_format(p_gsm_modem, GSM_MODEM_OP_FORMAT_LONG) != OK)
+    {
+        return FAILED;
+    }
+
+    if(gsm_modem_select_operator(p_gsm_modem, 
+                                    GSM_MODEM_OP_SELECTION_AUTO, NULL) != OK)
+    {
+        return FAILED;
+    }
+
+    if(gsm_modem_get_operator(p_gsm_modem) != OK)
+    {
+        return FAILED;
+    }
+
+    if(gsm_modem_sync(p_gsm_modem) != OK)
     {
         return FAILED;
     }
