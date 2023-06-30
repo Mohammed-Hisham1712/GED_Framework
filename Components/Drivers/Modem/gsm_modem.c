@@ -1277,7 +1277,7 @@ error_t gsm_modem_deinit(gsm_modem_t* p_gsm_modem)
 {
     ASSERT(p_gsm_modem);
 
-    if(atmodem_deinit(p_gsm_modem->dte_layer) != ATMODEM_RETVAL_SUCCESS)
+    if(atmodem_deinit(&p_gsm_modem->dte_layer) != ATMODEM_RETVAL_SUCCESS)
     {
         return FAILED;
     }
