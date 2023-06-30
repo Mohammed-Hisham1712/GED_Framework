@@ -27,6 +27,8 @@
 #define GSM_CMD_GET_REVISION            "+CGMR"
 #define GSM_CMD_GET_IMEI                "+CGSN"
 #define GSM_CMD_GET_IMSI                "+CIMI"
+#define GSM_CMD_GET_CHSET               "+CSCS?"
+#define GSM_CMD_SET_CHSET               "+CSCS=\"%s\""
 
 #define GSM_CMD_CREG_DISABLED           "+CREG=0"
 #define GSM_CMD_CREG_ENABLED            "+CREG=1"
@@ -41,6 +43,17 @@
 
 
 #define GSM_UNSO_CREG                   "+CREG: "
+
+
+#define GSM_MODEM_STR_CHSET_GSM         "GSM"
+#define GSM_MODEM_STR_CHSET_HEX         "HEX"
+#define GSM_MODEM_STR_CHSET_IRA         "IRA"
+#define GSM_MODEM_STR_CHSET_PCCP        "PCCP"
+#define GSM_MODEM_STR_CHSET_PCDN        "PCDN"
+#define GSM_MODEM_STR_CHSET_UCS2        "UCS2"
+#define GSM_MODEM_STR_CHSET_UTF8        "UTF-8"
+#define GSM_MODEM_STR_CHSET_8859_1      "8859-1"
+#define GSM_MODEM_STR_CHSET_8859C       "8859-c"
 
 typedef enum
 {
@@ -62,7 +75,7 @@ enum
 
 typedef enum
 {
-    GSM_MODEM_OP_FORMAT_LONG,
+    GSM_MODEM_OP_FORMAT_LONG = 0,
     GSM_MODEM_OP_FORMAT_SHORT,
     GSM_MODEM_OP_FORMAT_NUMERIC,
     GSM_MODEM_OP_FORMAT_INVALID
@@ -70,7 +83,7 @@ typedef enum
 
 typedef enum
 {
-    GSM_MODEM_OP_SELECTION_AUTO,
+    GSM_MODEM_OP_SELECTION_AUTO = 0,
     GSM_MODEM_OP_SELECTION_MANUAL,
     GSM_MODEM_OP_SELECTION_DEREGISTER,
     GSM_MOEDM_OP_SELECTION_FORMAT,
@@ -80,12 +93,26 @@ typedef enum
 
 typedef enum
 {
-    GSM_MODEM_OP_STATUS_UNKOWN,
+    GSM_MODEM_OP_STATUS_UNKOWN = 0,
     GSM_MODEM_OP_STATUS_AVAILABLE,
     GSM_MODEM_OP_STATUS_CURRENT,
     GSM_MODEM_OP_STATUS_FORBIDDEN,
     GSM_MODEM_OP_STATUS_MAX,
 } gsm_modem_op_status_t;
+
+typedef enum
+{
+    GSM_MODEM_CHSET_GSM,
+    GSM_MODEM_CHSET_HEX,
+    GSM_MODEM_CHSET_IRA,
+    GSM_MODEM_CHSET_PCCP,
+    GSM_MODEM_CHSET_PCDN,
+    GSM_MODEM_CHSET_UCS2,
+    GSM_MODEM_CHSET_UTF8,
+    GSM_MODEM_CHSET_8859_1,
+    GSM_MODEM_CHSET_8859C,
+    GSM_MODEM_CHSET_MAX
+} gsm_modem_chset_t;
 
 typedef struct
 {
@@ -118,6 +145,7 @@ typedef struct
     #endif
     char imei[GSM_DCE_IMEI_SIZE + 1];
     char imsi[GSM_DCE_IMSI_SIZE + 1];
+    uint8_t chset;      /* Character set used by MT */
 } gsm_dce_attr_t;
 
 

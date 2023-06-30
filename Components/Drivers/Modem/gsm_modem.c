@@ -28,6 +28,20 @@
 #endif  /* GSM_MODEM_LOG_VERBOSITY_SUPRESS */
 
 
+
+const char* str_chsets[GSM_MODEM_CHSET_MAX] = 
+{
+    GSM_MODEM_STR_CHSET_GSM,
+    GSM_MODEM_STR_CHSET_HEX,
+    GSM_MODEM_STR_CHSET_IRA,
+    GSM_MODEM_STR_CHSET_PCCP,
+    GSM_MODEM_STR_CHSET_PCDN,
+    GSM_MODEM_STR_CHSET_UCS2,
+    GSM_MODEM_STR_CHSET_UTF8,
+    GSM_MODEM_STR_CHSET_8859_1,
+    GSM_MODEM_STR_CHSET_8859C,
+};
+
 /**
  * @brief Copy a specific parameter given in DCE responses to \p pdest
  * 
@@ -38,8 +52,8 @@
  * @param dest_size Size of \p pdest including null byte.
  * @param param_id Parameter posision in \p resp starting from 0. If the specified 
  *                 parameter is double quoted, the qoutes are removed.
- * @return int Number of characters copied from \p resp to \p pdest not counting
- *         the null byte.
+ * @return int Number of characters copied or ,would have been copied give sufficient
+ *         \p dest_size , from \p resp to \p pdest not counting the null byte.
  */
 static int gsm_modem_get_resp_param(const char* resp, char* pdest, 
                                                 uint8_t dest_size, uint8_t param_id)
@@ -129,7 +143,7 @@ static int gsm_modem_get_resp_param(const char* resp, char* pdest,
     memcpy(pdest, start_ptr, to_copy);
     pdest[to_copy] = '\0';
 
-    return to_copy;
+    return param_len;
 }
 
 static error_t gsm_modem_handle_unso_creg(gsm_modem_t* p_gsm_modem, const char* resp)
@@ -404,6 +418,80 @@ static error_t gsm_modem_handle_cimi(atmodem_rescode_t rescode,
     return l_ret;
 }
 
+static error_t gsm_modem_handle_cscs(atmodem_rescode_t rescode,
+                                                    const char* resp, void* args)
+{
+    char param[8];
+    gsm_modem_t* p_gsm_modem;
+    gsm_dce_attr_t* dce;
+    int param_len;
+    error_t l_ret;
+
+    ASSERT(resp);
+    ASSERT(args);
+
+    p_gsm_modem = (gsm_modem_t*) args;
+    dce = &p_gsm_modem->dce_attr;
+    l_ret = OK;
+
+    switch(rescode)
+    {
+        case ATMODEM_RESCODE_NOT_RECOGNIZED:
+            param_len = gsm_modem_get_resp_param(resp, param, sizeof(param), 0);
+
+            if((param_len > 0) && (param_len < sizeof(param)))
+            {
+                LOGD(GSM_MODEM_TAG, "Char set: %s", param);
+                if((param_len == sizeof(GSM_MODEM_STR_CHSET_GSM) - 1) &&
+                            memcmp(param, GSM_MODEM_STR_CHSET_GSM, param_len) == 0)
+                {
+                    dce->chset = GSM_MODEM_CHSET_GSM;
+                }
+                else if((param_len == sizeof(GSM_MODEM_STR_CHSET_HEX) - 1) &&
+                            memcmp(param, GSM_MODEM_STR_CHSET_HEX, param_len) == 0)
+                {
+                    dce->chset = GSM_MODEM_CHSET_HEX;
+                }
+                else if((param_len == sizeof(GSM_MODEM_STR_CHSET_IRA) - 1) &&
+                            memcmp(param, GSM_MODEM_STR_CHSET_IRA, param_len) == 0)
+                {
+                    dce->chset = GSM_MODEM_CHSET_IRA;
+                }
+                else if((param_len == sizeof(GSM_MODEM_STR_CHSET_UCS2) - 1) &&
+                            memcmp(param, GSM_MODEM_STR_CHSET_UCS2, param_len) == 0)
+                {
+                    dce->chset = GSM_MODEM_CHSET_UCS2;
+                }
+                else if((param_len == sizeof(GSM_MODEM_STR_CHSET_UTF8) - 1) &&
+                            memcmp(param, GSM_MODEM_STR_CHSET_UTF8, param_len) == 0)
+                {
+                    dce->chset = GSM_MODEM_CHSET_UTF8;
+                }
+                else
+                {
+                    GSM_MODEM_LOGE("Unkown char. set!");
+                    l_ret = FAILED;
+                }   
+            }
+            else
+            {
+                GSM_MODEM_LOGE("Failed to get char. set!");
+                l_ret = FAILED;
+            }
+            break;
+        case ATMODEM_RESCODE_OK:
+            break;
+        case ATMODEM_RESCODE_ERROR:
+            GSM_MODEM_LOGE("+CSCS response failed!");
+            break;
+        default:
+            l_ret = FAILED;
+            break;
+    }
+
+    return l_ret;
+}
+
 static error_t gsm_modem_handle_cops(atmodem_rescode_t rescode, 
                                             const char* resp, void* args)
 {
@@ -603,6 +691,55 @@ error_t gsm_modem_get_dce_imsi(gsm_modem_t* p_gsm_modem)
     return OK;
 }
 
+error_t gsm_modem_get_character_set(gsm_modem_t* p_gsm_modem)
+{
+    atmodem_cmd_desc_t cmd_desc;
+
+    ASSERT(p_gsm_modem);
+
+    cmd_desc.cmd = GSM_CMD_GET_CHSET;
+    cmd_desc.cmd_size = 0;
+    cmd_desc.resp_callback = &gsm_modem_handle_cscs;
+    cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+
+    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
+                                                    != ATMODEM_RETVAL_SUCCESS)
+    {
+        GSM_MODEM_LOGE("+CSCS? send failed!");
+        return FAILED;
+    }
+
+    return OK;
+}
+
+error_t gsm_modem_set_character_set(gsm_modem_t* p_gsm_modem, gsm_modem_chset_t chset)
+{
+    char cmd_str[16];
+    atmodem_cmd_desc_t cmd_desc;
+
+    ASSERT(p_gsm_modem);
+    ASSERT(chset < GSM_MODEM_CHSET_MAX);
+
+    cmd_desc.resp_callback = &gsm_modem_handle_default;
+    cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+    cmd_desc.cmd_size = snprintf_(cmd_str, sizeof(cmd_str), 
+                                                GSM_CMD_SET_CHSET, str_chsets[chset]);
+    if(cmd_desc.cmd_size >= sizeof(cmd_str))
+    {
+        GSM_MODEM_LOGE("cmd buffer is insufficient!");
+        return FAILED;
+    }
+    cmd_desc.cmd = cmd_str;
+    
+    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
+                                                    != ATMODEM_RETVAL_SUCCESS)
+    {
+        LOGE(GSM_MODEM_TAG, "%s send failed!", cmd_str);
+        return FAILED;
+    }
+
+    return OK;
+}
 error_t gsm_modem_set_network_registeration_result_code
                                         (gsm_modem_t* p_gsm_modem, uint8_t verbosity)
 {
@@ -830,6 +967,16 @@ error_t gsm_modem_init(gsm_modem_t* p_gsm_modem, const atmodem_config_t* p_dte_c
     }
 
     if(gsm_modem_get_operator(p_gsm_modem) != OK)
+    {
+        return FAILED;
+    }
+
+    if(gsm_modem_set_character_set(p_gsm_modem, GSM_MODEM_CHSET_GSM) != OK)
+    {
+        return FAILED;
+    }
+
+    if(gsm_modem_get_character_set(p_gsm_modem) != OK)
     {
         return FAILED;
     }
