@@ -181,13 +181,27 @@ typedef struct
 
 
 /**
- * @brief 
+ * @brief Initialization function that must be called before using any of the functions
+ *        specified in this file. The function creates a task to handle responses and
+ *        unsolicited result codes coming from DCE, it also creates a binary semaphore
+ *        to synchronize with tasks that request sending AT commands.
  * 
  * @param p_modem 
- * @param p_config 
+ * @param p_config Pointer to atmodem_config_t that holds serial communication parameters
+ *                 and RTOS parameters.
  * @return atmodem_retval_t
  */
 atmodem_retval_t atmodem_init(atmodem_layer_t* p_modem, const atmodem_config_t* p_config);
+
+
+/**
+ * @brief Deinitialization function that must be called when done with ATModem layer
+ *        functionality to delete the created task and free resources.
+ * 
+ * @param p_modem 
+ * @return atmodem_retval_t 
+ */
+atmodem_retval_t atmodem_deinit(atmodem_layer_t* p_modem);
 
 
 /**
@@ -195,6 +209,8 @@ atmodem_retval_t atmodem_init(atmodem_layer_t* p_modem, const atmodem_config_t* 
  *        Command can be in basic, S-parameter or extended format.
  *        The function will add the prefix 'AT' as well as the trailer '\cr'.
  *        Example: cmd_desc.cmd = "+CGMI"
+ *        This function will block on a binary semaphore until either a proper
+ *        response is received from DCE or timeout has elapsed.
  *
  * @param p_modem Pointer to ATmodem layer
  * @param p_cmd_desc Pointer to atmodem_cmd_desc_t that contains the command string,

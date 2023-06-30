@@ -496,6 +496,175 @@ static error_t gsm_modem_handle_cscs(atmodem_rescode_t rescode,
     return l_ret;
 }
 
+
+static error_t gsm_modem_handle_cpas(atmodem_rescode_t rescode,
+                                                    const char* resp, void* args)
+{
+    gsm_modem_t* p_gsm_modem;
+    gsm_modem_activ_status_t* p_status;
+    char param[2];
+    int param_len;
+    error_t l_ret;
+
+    ASSERT(resp);
+    ASSERT(args);
+
+    p_gsm_modem = (gsm_modem_t*) args;
+    p_status = (gsm_modem_activ_status_t*) p_gsm_modem->priv_resources;
+    l_ret = OK;
+
+    switch(rescode)
+    {
+        case ATMODEM_RESCODE_NOT_RECOGNIZED:
+            param_len = gsm_modem_get_resp_param(resp, param, sizeof(param), 0);
+            if(param_len == 1)
+            {
+                *p_status = strtol(param, NULL, 10);
+                LOGD(GSM_MODEM_TAG, "Phone status: %u", *p_status);
+
+                if(*p_status >= GSM_MODEM_ACTIV_STATUS_INVALID)
+                {
+                    GSM_MODEM_LOGE("Invalid phone activity status!");
+                    *p_status = GSM_MODEM_ACTIV_STATUS_INVALID;
+                    l_ret = FAILED;
+                }
+            }
+            else
+            {
+                GSM_MODEM_LOGE("Failed to get phone activity status!");
+                l_ret = FAILED;
+            }
+            break;
+        case ATMODEM_RESCODE_OK:
+            break;
+        case ATMODEM_RESCODE_ERROR:
+            GSM_MODEM_LOGE("+CPAS response failed!");
+            break;
+        default:
+            l_ret = FAILED;
+            break;
+    }
+
+    return l_ret;
+}
+
+static error_t gsm_modem_handle_cfun(atmodem_rescode_t rescode,
+                                                    const char* resp, void* args)
+{
+    gsm_modem_t* p_gsm_modem;
+    gsm_modem_func_level_t* p_level;
+    char param[2];
+    int param_len;
+    error_t l_ret;
+
+    ASSERT(resp);
+    ASSERT(args);
+
+    p_gsm_modem = (gsm_modem_t*) args;
+    p_level = (gsm_modem_activ_status_t*) p_gsm_modem->priv_resources;
+    l_ret = OK;
+
+    switch(rescode)
+    {
+        case ATMODEM_RESCODE_NOT_RECOGNIZED:
+            param_len = gsm_modem_get_resp_param(resp, param, sizeof(param), 0);
+            if(param_len == 1)
+            {
+                *p_level = strtol(param, NULL, 10);
+                LOGD(GSM_MODEM_TAG, "Func level: %u", *p_level);
+
+                if(*p_level >= GSM_MODEM_FUNC_LEVEL_INVALID)
+                {
+                    GSM_MODEM_LOGE("Invalid MT func level!");
+                    *p_level = GSM_MODEM_FUNC_LEVEL_INVALID;
+                    l_ret = FAILED;
+                }
+            }
+            else
+            {
+                GSM_MODEM_LOGE("Failed to get MT func level!");
+                l_ret = FAILED;
+            }
+            break;
+        case ATMODEM_RESCODE_OK:
+            break;
+        case ATMODEM_RESCODE_ERROR:
+            GSM_MODEM_LOGE("+CFUN response failed!");
+            break;
+        default:
+            l_ret = FAILED;
+            break;
+    }
+
+    return l_ret;
+}
+
+static error_t gsm_modem_handle_csq(atmodem_rescode_t rescode,
+                                                    const char* resp, void* args)
+{
+    gsm_modem_t* p_gsm_modem;
+    uint8_t* p_rssi;
+    uint8_t* p_ber;
+    void** p_resources;
+    char param[3];
+    int param_len;
+    error_t l_ret;
+
+    ASSERT(resp);
+    ASSERT(args);
+
+    p_gsm_modem = (gsm_modem_t*) args;
+    p_resources = (void**) p_gsm_modem->priv_resources;
+    p_rssi = (uint8_t*) p_resources[0];
+    p_ber = (uint8_t*) p_resources[1];
+    l_ret = OK;
+
+    switch(rescode)
+    {
+        case ATMODEM_RESCODE_NOT_RECOGNIZED:
+            if(p_rssi)
+            {
+                param_len = gsm_modem_get_resp_param(resp, param, sizeof(param), 0);
+                if(param_len > 0 && param_len < sizeof(param))
+                {
+                    *p_rssi = strtol(param, NULL, 10);
+                    LOGD(GSM_MODEM_TAG, "RSSI: %u", *p_rssi);
+                }
+                else
+                {
+                    GSM_MODEM_LOGE("Invalid RSSI");
+                    l_ret = FAILED;
+                }
+            }
+
+            if(p_ber)
+            {
+                param_len = gsm_modem_get_resp_param(resp, param, sizeof(param), 1);
+                if(param_len > 0 && param_len < sizeof(param))
+                {
+                    *p_ber = strtol(param, NULL, 10);
+                    LOGD(GSM_MODEM_TAG, "BER: %u", *p_ber);
+                }
+                else
+                {
+                    GSM_MODEM_LOGE("Invalid BER");
+                    l_ret = FAILED;
+                }
+            }
+            break;
+        case ATMODEM_RESCODE_OK:
+            break;
+        case ATMODEM_RESCODE_ERROR:
+            GSM_MODEM_LOGE("+CSQ response failed!");
+            break;
+        default:
+            l_ret = FAILED;
+            break;
+    }
+
+    return l_ret;
+}
+
 #if 0
 static error_t gsm_modem_handle_cops(atmodem_rescode_t rescode, 
                                             const char* resp, void* args)
@@ -600,7 +769,7 @@ error_t gsm_modem_get_dce_manufacturer(gsm_modem_t* p_gsm_modem, char* manufactu
     cmd_desc.cmd = GSM_CMD_GET_MANUFACTURER;
     cmd_desc.cmd_size = 0;
     cmd_desc.resp_callback = &gsm_modem_handle_cgmi;
-    cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+    cmd_desc.timeout_ms = GSM_CMD_DEFAULT_TIMEOUT;
 
     p_gsm_modem->priv_resources = (void*) manufacturer;
 
@@ -624,7 +793,7 @@ error_t gsm_modem_get_dce_model_name(gsm_modem_t* p_gsm_modem, char* model_name)
     cmd_desc.cmd = GSM_CMD_GET_MODEL_NAME;
     cmd_desc.cmd_size = 0;
     cmd_desc.resp_callback = &gsm_modem_handle_cgmm;
-    cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+    cmd_desc.timeout_ms = GSM_CMD_DEFAULT_TIMEOUT;
 
     p_gsm_modem->priv_resources = (void*) model_name;
 
@@ -649,7 +818,7 @@ error_t gsm_modem_get_dce_revision(gsm_modem_t* p_gsm_modem, char* revision)
     cmd_desc.cmd = GSM_CMD_GET_REVISION;
     cmd_desc.cmd_size = 0;
     cmd_desc.resp_callback = &gsm_modem_handle_cgmr;
-    cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+    cmd_desc.timeout_ms = GSM_CMD_DEFAULT_TIMEOUT;
 
     p_gsm_modem->priv_resources = (void*) revision;
 
@@ -674,7 +843,7 @@ error_t gsm_modem_get_dce_imei(gsm_modem_t* p_gsm_modem, char* imei)
     cmd_desc.cmd = GSM_CMD_GET_IMEI;
     cmd_desc.cmd_size = 0;
     cmd_desc.resp_callback = &gsm_modem_handle_cgsn;
-    cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+    cmd_desc.timeout_ms = GSM_CMD_DEFAULT_TIMEOUT;
 
     p_gsm_modem->priv_resources = (void*) imei;
 
@@ -698,7 +867,7 @@ error_t gsm_modem_get_dce_imsi(gsm_modem_t* p_gsm_modem, char* imsi)
     cmd_desc.cmd = GSM_CMD_GET_IMSI;
     cmd_desc.cmd_size = 0;
     cmd_desc.resp_callback = &gsm_modem_handle_cimi;
-    cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+    cmd_desc.timeout_ms = GSM_CMD_DEFAULT_TIMEOUT;
 
     p_gsm_modem->priv_resources = (void*) imsi;
 
@@ -723,7 +892,7 @@ error_t gsm_modem_get_dce_character_set(gsm_modem_t* p_gsm_modem,
     cmd_desc.cmd = GSM_CMD_GET_CHSET;
     cmd_desc.cmd_size = 0;
     cmd_desc.resp_callback = &gsm_modem_handle_cscs;
-    cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+    cmd_desc.timeout_ms = GSM_CMD_DEFAULT_TIMEOUT;
 
     p_gsm_modem->priv_resources = (void*) chset;
 
@@ -747,7 +916,7 @@ error_t gsm_modem_set_dce_character_set(gsm_modem_t* p_gsm_modem,
     ASSERT(chset < GSM_MODEM_CHSET_INVALID);
 
     cmd_desc.resp_callback = &gsm_modem_handle_default;
-    cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+    cmd_desc.timeout_ms = GSM_CMD_DEFAULT_TIMEOUT;
     cmd_desc.cmd_size = snprintf_(cmd_str, sizeof(cmd_str), 
                                                 GSM_CMD_SET_CHSET, str_chsets[chset]);
     if(cmd_desc.cmd_size >= sizeof(cmd_str))
@@ -777,6 +946,136 @@ const char* gsm_modem_dce_chset_to_str(gsm_modem_chset_t chset)
     return NULL;
 }
 
+
+error_t gsm_modem_get_mt_activ_status(gsm_modem_t* p_gsm_modem, 
+                                                gsm_modem_activ_status_t* p_status)
+{
+    atmodem_cmd_desc_t cmd_desc;
+
+    ASSERT(p_gsm_modem);
+    ASSERT(p_status);
+
+    cmd_desc.cmd = GSM_CMD_GET_ACTIV_STATUS;
+    cmd_desc.cmd_size = 0;
+    cmd_desc.resp_callback = &gsm_modem_handle_cpas;
+    cmd_desc.timeout_ms = GSM_CMD_DEFAULT_TIMEOUT;
+
+    p_gsm_modem->priv_resources = (void*) p_status;
+
+    if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
+                                                    != ATMODEM_RETVAL_SUCCESS)
+    {
+        GSM_MODEM_LOGE("+CPAS send failed!");
+        return FAILED;
+    }
+
+    return OK;
+}
+
+
+error_t gsm_modem_soft_reset(gsm_modem_t* p_gsm_modem)
+{
+    atmodem_cmd_desc_t cmd_desc;
+
+    ASSERT(p_gsm_modem);
+
+    cmd_desc.cmd = GSM_CMD_SOFT_RESET;
+    cmd_desc.cmd_size = 0;
+    cmd_desc.resp_callback = &gsm_modem_handle_default;
+    cmd_desc.timeout_ms = GSM_CMD_SET_FUNC_LEVEL_TIMEOUT;
+
+    if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
+                                                    != ATMODEM_RETVAL_SUCCESS)
+    {
+        GSM_MODEM_LOGE("+CFUN=1,1 send failed!");
+        return FAILED;
+    }
+
+    return OK;
+}
+
+error_t gsm_modem_set_mt_func_level(gsm_modem_t* p_gsm_modem, 
+                                                    gsm_modem_func_level_t level)
+{
+    char cmd_str[8];
+    atmodem_cmd_desc_t cmd_desc;
+
+    ASSERT(p_gsm_modem);
+    ASSERT(level < GSM_MODEM_FUNC_LEVEL_INVALID);
+
+    cmd_desc.resp_callback = &gsm_modem_handle_default;
+    cmd_desc.timeout_ms = GSM_CMD_SET_FUNC_LEVEL_TIMEOUT;
+    cmd_desc.cmd_size = snprintf_(cmd_str, sizeof(cmd_str), 
+                                            GSM_CMD_SET_FUNC_LEVEL, level);
+    if(cmd_desc.cmd_size >= sizeof(cmd_str))
+    {
+        GSM_MODEM_LOGE("cmd buffer is insufficient!");
+        return FAILED;
+    }
+    cmd_desc.cmd = cmd_str;
+
+    if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
+                                                    != ATMODEM_RETVAL_SUCCESS)
+    {
+        LOGE(GSM_MODEM_TAG, "%s send failed!", cmd_str);
+        return FAILED;
+    }
+
+    return OK;
+}
+
+error_t gsm_modem_get_mt_func_level(gsm_modem_t* p_gsm_modem, 
+                                                gsm_modem_activ_status_t* p_level)
+{
+    atmodem_cmd_desc_t cmd_desc;
+
+    ASSERT(p_gsm_modem);
+    ASSERT(p_level);
+
+    cmd_desc.cmd = GSM_CMD_GET_FUNC_LEVEL;
+    cmd_desc.cmd_size = 0;
+    cmd_desc.resp_callback = &gsm_modem_handle_cfun;
+    cmd_desc.timeout_ms = GSM_CMD_DEFAULT_TIMEOUT;
+
+    p_gsm_modem->priv_resources = (void*) p_level;
+
+    if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
+                                                    != ATMODEM_RETVAL_SUCCESS)
+    {
+        GSM_MODEM_LOGE("+CFUN? send failed!");
+        return FAILED;
+    }
+
+    return OK;
+}
+
+error_t gsm_modem_get_mt_signal_quality(gsm_modem_t* p_gsm_modem, 
+                                                    uint8_t* p_rssi, uint8_t* p_ber)
+{
+    atmodem_cmd_desc_t cmd_desc;
+    void* resources[2];
+
+    ASSERT(p_gsm_modem);
+
+    cmd_desc.cmd = GSM_CMD_GET_SIGNAL_QUALITY;
+    cmd_desc.cmd_size = 0;
+    cmd_desc.resp_callback = &gsm_modem_handle_csq;
+    cmd_desc.timeout_ms = GSM_CMD_DEFAULT_TIMEOUT;
+
+    resources[0] = (void*) p_rssi;
+    resources[1] = (void*) p_ber;
+    p_gsm_modem->priv_resources = resources;
+
+    if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
+                                                    != ATMODEM_RETVAL_SUCCESS)
+    {
+        GSM_MODEM_LOGE("+CSQ send failed!");
+        return FAILED;
+    }
+
+    return OK;
+}
+
 #if 0
 error_t gsm_modem_set_network_registeration_result_code
                                         (gsm_modem_t* p_gsm_modem, uint8_t verbosity)
@@ -787,7 +1086,7 @@ error_t gsm_modem_set_network_registeration_result_code
     ASSERT(verbosity <= GSM_MODEM_NETWORK_REGISTERATION_UNSO_RESCODE_WITH_LOC);
 
     cmd_desc.resp_callback = &gsm_modem_handle_default;
-    cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+    cmd_desc.timeout_ms = GSM_CMD_DEFAULT_TIMEOUT;
     cmd_desc.cmd_size = 0;
 
     switch(verbosity)
@@ -822,7 +1121,7 @@ error_t gsm_modem_select_operator_format(gsm_modem_t* p_gsm_modem,
     ASSERT(format < GSM_MODEM_OP_FORMAT_INVALID);
 
     cmd_desc.resp_callback = &gsm_modem_handle_default;
-    cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+    cmd_desc.timeout_ms = GSM_CMD_DEFAULT_TIMEOUT;
     cmd_desc.cmd_size = 0;
 
     switch (format)
@@ -919,7 +1218,7 @@ error_t gsm_modem_get_operator(gsm_modem_t* p_gsm_modem)
 
     cmd_desc.cmd = GSM_CMD_OP_GET;
     cmd_desc.resp_callback = &gsm_modem_handle_cops;
-    cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+    cmd_desc.timeout_ms = GSM_CMD_DEFAULT_TIMEOUT;
     cmd_desc.cmd_size = 0;
 
     if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
@@ -940,7 +1239,7 @@ error_t gsm_modem_sync(gsm_modem_t* p_gsm_modem)
     cmd_desc.cmd = "";
     cmd_desc.cmd_size = 0;
     cmd_desc.resp_callback = NULL;
-    cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+    cmd_desc.timeout_ms = GSM_CMD_DEFAULT_TIMEOUT;
 
     if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                     != ATMODEM_RETVAL_SUCCESS)
@@ -970,6 +1269,20 @@ error_t gsm_modem_init(gsm_modem_t* p_gsm_modem, const atmodem_config_t* p_dte_c
     {
         return FAILED;
     }
+
+    return OK;
+}
+
+error_t gsm_modem_deinit(gsm_modem_t* p_gsm_modem)
+{
+    ASSERT(p_gsm_modem);
+
+    if(atmodem_deinit(p_gsm_modem->dte_layer) != ATMODEM_RETVAL_SUCCESS)
+    {
+        return FAILED;
+    }
+
+    memset(p_gsm_modem, 0, sizeof(gsm_modem_t));
 
     return OK;
 }

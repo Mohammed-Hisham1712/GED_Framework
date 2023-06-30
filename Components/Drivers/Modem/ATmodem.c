@@ -323,9 +323,12 @@ error_t atmodem_abort(atmodem_layer_t* p_modem)
         p_modem->status &= ~ATMODEM_STATUS_CMD_BUSY;
         p_modem->status |= ATMODEM_STATUS_CMD_ABORTED;
 
-        if(p_modem->cmd_semaphore)
+        if(xTaskGetCurrentTaskHandle() == p_modem->tsk_handle)
         {
-            xSemaphoreGive(p_modem->cmd_semaphore);
+            if(p_modem->cmd_semaphore)
+            {
+                xSemaphoreGive(p_modem->cmd_semaphore);
+            }
         }
     }
 
@@ -419,12 +422,12 @@ atmodem_retval_t atmodem_init(atmodem_layer_t* p_modem, const atmodem_config_t* 
 atmodem_retval_t atmodem_deinit(atmodem_layer_t* p_modem)
 {
     
-    atmodem_abort(p_modem);
-    
     if(p_modem->cmd_semaphore)
     {
+        xSemaphoreGive(p_modem->cmd_semaphore);
         vSemaphoreDelete(p_modem->cmd_semaphore);
     }
+    
 
     vTaskDelete(p_modem->tsk_handle);
 
@@ -500,6 +503,7 @@ atmodem_retval_t atmodem_send_command(atmodem_layer_t* p_modem,
         ret = xSemaphoreTake(p_modem->cmd_semaphore, p_cmd_desc->timeout_ms);
         if(ret != pdPASS)
         {
+            ATMODEM_LOGE("CMD timedout!");
             atmodem_abort(p_modem);            
         }
     }
