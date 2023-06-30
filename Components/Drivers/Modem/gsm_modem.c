@@ -29,7 +29,7 @@
 
 
 
-const char* str_chsets[GSM_MODEM_CHSET_MAX] = 
+const char* str_chsets[] = 
 {
     GSM_MODEM_STR_CHSET_GSM,
     GSM_MODEM_STR_CHSET_HEX,
@@ -52,7 +52,7 @@ const char* str_chsets[GSM_MODEM_CHSET_MAX] =
  * @param dest_size Size of \p pdest including null byte.
  * @param param_id Parameter posision in \p resp starting from 0. If the specified 
  *                 parameter is double quoted, the qoutes are removed.
- * @return int Number of characters copied or ,would have been copied give sufficient
+ * @return int Number of characters copied or ,would have been copied given sufficient
  *         \p dest_size , from \p resp to \p pdest not counting the null byte.
  */
 static int gsm_modem_get_resp_param(const char* resp, char* pdest, 
@@ -253,26 +253,26 @@ static error_t gsm_modem_handle_cgmi(atmodem_rescode_t rescode,
                                                         const char* resp, void* args)
 {
     gsm_modem_t* p_gsm_modem;
-    gsm_dce_attr_t* dce;
+    char* manufacturer;
     error_t l_ret;
 
     ASSERT(resp);
     ASSERT(args);
 
     p_gsm_modem = (gsm_modem_t*) args;
-    dce = &p_gsm_modem->dce_attr;
+    manufacturer = (char*) p_gsm_modem->priv_resources;
     l_ret = OK;
 
     switch(rescode)
     {
         case ATMODEM_RESCODE_NOT_RECOGNIZED:
-            strncpy(dce->manufacturer, resp, GSM_DCE_MANUFACTURER_MAX_SIZE);
-            dce->manufacturer[GSM_DCE_MANUFACTURER_MAX_SIZE - 1] = '\0';
+            strncpy(manufacturer, resp, GSM_DCE_MANUFACTURER_MAX_SIZE);
+            manufacturer[GSM_DCE_MANUFACTURER_MAX_SIZE - 1] = '\0';
             break;
         case ATMODEM_RESCODE_OK:
             break;
         case ATMODEM_RESCODE_ERROR:
-            strncpy(dce->manufacturer, "ERROR", GSM_DCE_MANUFACTURER_MAX_SIZE);
+            memset(manufacturer, 0, GSM_DCE_MANUFACTURER_MAX_SIZE);
             GSM_MODEM_LOGE("+CGMI response failed!");
             break;
         default:
@@ -287,26 +287,26 @@ static error_t gsm_modem_handle_cgmm(atmodem_rescode_t rescode,
                                                     const char* resp, void* args)
 {
     gsm_modem_t* p_gsm_modem;
-    gsm_dce_attr_t* dce;
+    char* model_name;
     error_t l_ret;
 
     ASSERT(resp);
     ASSERT(args);
 
     p_gsm_modem = (gsm_modem_t*) args;
-    dce = &p_gsm_modem->dce_attr;
+    model_name = (char*) p_gsm_modem->priv_resources;
     l_ret = OK;
 
     switch(rescode)
     {
         case ATMODEM_RESCODE_NOT_RECOGNIZED:
-            strncpy(dce->model_name, resp, GSM_DCE_MODEL_NAME_MAX_SIZE);
-            dce->model_name[GSM_DCE_MODEL_NAME_MAX_SIZE - 1] = '\0';
+            strncpy(model_name, resp, GSM_DCE_MODEL_NAME_MAX_SIZE);
+            model_name[GSM_DCE_MODEL_NAME_MAX_SIZE - 1] = '\0';
             break;
         case ATMODEM_RESCODE_OK:
             break;
         case ATMODEM_RESCODE_ERROR:
-            strncpy(dce->model_name, "ERROR", GSM_DCE_MODEL_NAME_MAX_SIZE);
+            memset(model_name, 0, GSM_DCE_MODEL_NAME_MAX_SIZE);
             GSM_MODEM_LOGE("+CGMM response failed!");
             break;
         default:
@@ -322,26 +322,26 @@ static error_t gsm_modem_handle_cgmr(atmodem_rescode_t rescode,
                                                     const char* resp, void* args)
 {
     gsm_modem_t* p_gsm_modem;
-    gsm_dce_attr_t* dce;
+    char* revision;
     error_t l_ret;
 
     ASSERT(resp);
     ASSERT(args);
 
     p_gsm_modem = (gsm_modem_t*) args;
-    dce = &p_gsm_modem->dce_attr;
+    revision = (char*) p_gsm_modem->priv_resources;
     l_ret = OK;
 
     switch(rescode)
     {
         case ATMODEM_RESCODE_NOT_RECOGNIZED:
-            strncpy(dce->revision, resp, GSM_DCE_REVISION_MAX_SIZE);
-            dce->revision[GSM_DCE_REVISION_MAX_SIZE - 1] = '\0';
+            strncpy(revision, resp, GSM_DCE_REVISION_MAX_SIZE);
+            revision[GSM_DCE_REVISION_MAX_SIZE - 1] = '\0';
             break;
         case ATMODEM_RESCODE_OK:
             break;
         case ATMODEM_RESCODE_ERROR:
-            strncpy(dce->revision, "ERROR", GSM_DCE_REVISION_MAX_SIZE);
+            memset(revision, 0, GSM_DCE_REVISION_MAX_SIZE);
             GSM_MODEM_LOGE("+CGMR response failed!");
             break;
         default:
@@ -357,26 +357,26 @@ static error_t gsm_modem_handle_cgsn(atmodem_rescode_t rescode,
                                                 const char* resp, void* args)
 {
     gsm_modem_t* p_gsm_modem;
-    gsm_dce_attr_t* dce;
+    char*   imei;
     error_t l_ret;
 
     ASSERT(resp);
     ASSERT(args);
 
     p_gsm_modem = (gsm_modem_t*) args;
-    dce = &p_gsm_modem->dce_attr;
+    imei = (char*) p_gsm_modem->priv_resources;
     l_ret = OK;
 
     switch(rescode)
     {
         case ATMODEM_RESCODE_NOT_RECOGNIZED:
-            strncpy(dce->imei, resp, sizeof(dce->imei));
-            dce->imei[sizeof(dce->imei) - 1] = '\0';
+            strncpy(imei, resp, GSM_DCE_IMEI_SIZE);
+            imei[GSM_DCE_IMEI_SIZE] = '\0';
             break;
         case ATMODEM_RESCODE_OK:
             break;
         case ATMODEM_RESCODE_ERROR:
-            strncpy(dce->imei, "ERROR", sizeof(dce->imei));
+            memset(imei, 0, GSM_DCE_IMEI_SIZE + 1);
             GSM_MODEM_LOGE("+CGSN response failed!");
             break;
         default:
@@ -391,26 +391,26 @@ static error_t gsm_modem_handle_cimi(atmodem_rescode_t rescode,
                                                     const char* resp, void* args)
 {
     gsm_modem_t* p_gsm_modem;
-    gsm_dce_attr_t* dce;
+    char* imsi;
     error_t l_ret;
 
     ASSERT(resp);
     ASSERT(args);
 
     p_gsm_modem = (gsm_modem_t*) args;
-    dce = &p_gsm_modem->dce_attr;
+    imsi = (char*) p_gsm_modem->priv_resources;
     l_ret = OK;
 
     switch(rescode)
     {
         case ATMODEM_RESCODE_NOT_RECOGNIZED:
-            strncpy(dce->imsi, resp, sizeof(dce->imsi));
-            dce->imsi[sizeof(dce->imsi) - 1] = '\0';
+            strncpy(imsi, resp, GSM_DCE_IMSI_SIZE);
+            imsi[GSM_DCE_IMSI_SIZE] = '\0';
             break;
         case ATMODEM_RESCODE_OK:
             break;
         case ATMODEM_RESCODE_ERROR:
-            strncpy(dce->imsi, "ERROR", sizeof(dce->imsi));
+            memset(imsi, 0, GSM_DCE_IMSI_SIZE + 1);
             GSM_MODEM_LOGE("+CIMI response failed!");
             break;
         default:
@@ -426,7 +426,7 @@ static error_t gsm_modem_handle_cscs(atmodem_rescode_t rescode,
 {
     char param[8];
     gsm_modem_t* p_gsm_modem;
-    gsm_dce_attr_t* dce;
+    gsm_modem_chset_t* chset;
     int param_len;
     error_t l_ret;
 
@@ -434,7 +434,7 @@ static error_t gsm_modem_handle_cscs(atmodem_rescode_t rescode,
     ASSERT(args);
 
     p_gsm_modem = (gsm_modem_t*) args;
-    dce = &p_gsm_modem->dce_attr;
+    chset = (gsm_modem_chset_t*) p_gsm_modem->priv_resources;
     l_ret = OK;
 
     switch(rescode)
@@ -448,31 +448,32 @@ static error_t gsm_modem_handle_cscs(atmodem_rescode_t rescode,
                 if((param_len == sizeof(GSM_MODEM_STR_CHSET_GSM) - 1) &&
                             memcmp(param, GSM_MODEM_STR_CHSET_GSM, param_len) == 0)
                 {
-                    dce->chset = GSM_MODEM_CHSET_GSM;
+                    *chset = GSM_MODEM_CHSET_GSM;
                 }
                 else if((param_len == sizeof(GSM_MODEM_STR_CHSET_HEX) - 1) &&
                             memcmp(param, GSM_MODEM_STR_CHSET_HEX, param_len) == 0)
                 {
-                    dce->chset = GSM_MODEM_CHSET_HEX;
+                    *chset = GSM_MODEM_CHSET_HEX;
                 }
                 else if((param_len == sizeof(GSM_MODEM_STR_CHSET_IRA) - 1) &&
                             memcmp(param, GSM_MODEM_STR_CHSET_IRA, param_len) == 0)
                 {
-                    dce->chset = GSM_MODEM_CHSET_IRA;
+                    *chset = GSM_MODEM_CHSET_IRA;
                 }
                 else if((param_len == sizeof(GSM_MODEM_STR_CHSET_UCS2) - 1) &&
                             memcmp(param, GSM_MODEM_STR_CHSET_UCS2, param_len) == 0)
                 {
-                    dce->chset = GSM_MODEM_CHSET_UCS2;
+                    *chset = GSM_MODEM_CHSET_UCS2;
                 }
                 else if((param_len == sizeof(GSM_MODEM_STR_CHSET_UTF8) - 1) &&
                             memcmp(param, GSM_MODEM_STR_CHSET_UTF8, param_len) == 0)
                 {
-                    dce->chset = GSM_MODEM_CHSET_UTF8;
+                    *chset = GSM_MODEM_CHSET_UTF8;
                 }
                 else
                 {
                     GSM_MODEM_LOGE("Unkown char. set!");
+                    *chset = GSM_MODEM_CHSET_INVALID;
                     l_ret = FAILED;
                 }   
             }
@@ -495,6 +496,7 @@ static error_t gsm_modem_handle_cscs(atmodem_rescode_t rescode,
     return l_ret;
 }
 
+#if 0
 static error_t gsm_modem_handle_cops(atmodem_rescode_t rescode, 
                                             const char* resp, void* args)
 {
@@ -586,17 +588,21 @@ static error_t gsm_modem_handle_cops(atmodem_rescode_t rescode,
 
     return OK;
 }
+#endif
 
-error_t gsm_modem_get_dce_manufacturer(gsm_modem_t* p_gsm_modem)
+error_t gsm_modem_get_dce_manufacturer(gsm_modem_t* p_gsm_modem, char* manufacturer)
 {
     atmodem_cmd_desc_t cmd_desc;
 
     ASSERT(p_gsm_modem);
+    ASSERT(manufacturer);
 
     cmd_desc.cmd = GSM_CMD_GET_MANUFACTURER;
     cmd_desc.cmd_size = 0;
     cmd_desc.resp_callback = &gsm_modem_handle_cgmi;
     cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+
+    p_gsm_modem->priv_resources = (void*) manufacturer;
 
     if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                     != ATMODEM_RETVAL_SUCCESS)
@@ -608,16 +614,19 @@ error_t gsm_modem_get_dce_manufacturer(gsm_modem_t* p_gsm_modem)
     return OK;
 }
 
-error_t gsm_modem_get_dce_model_name(gsm_modem_t* p_gsm_modem)
+error_t gsm_modem_get_dce_model_name(gsm_modem_t* p_gsm_modem, char* model_name)
 {
     atmodem_cmd_desc_t cmd_desc;
 
     ASSERT(p_gsm_modem);
+    ASSERT(model_name);
 
     cmd_desc.cmd = GSM_CMD_GET_MODEL_NAME;
     cmd_desc.cmd_size = 0;
     cmd_desc.resp_callback = &gsm_modem_handle_cgmm;
     cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+
+    p_gsm_modem->priv_resources = (void*) model_name;
 
     if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                         != ATMODEM_RETVAL_SUCCESS)
@@ -630,16 +639,19 @@ error_t gsm_modem_get_dce_model_name(gsm_modem_t* p_gsm_modem)
 }
 
 #if CONFIG_GSM_DCE_EXTRA_ATTRS
-error_t gsm_modem_get_dce_revision(gsm_modem_t* p_gsm_modem)
+error_t gsm_modem_get_dce_revision(gsm_modem_t* p_gsm_modem, char* revision)
 {
     atmodem_cmd_desc_t cmd_desc;
 
     ASSERT(p_gsm_modem);
+    ASSERT(revision);
 
     cmd_desc.cmd = GSM_CMD_GET_REVISION;
     cmd_desc.cmd_size = 0;
     cmd_desc.resp_callback = &gsm_modem_handle_cgmr;
     cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+
+    p_gsm_modem->priv_resources = (void*) revision;
 
     if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                     != ATMODEM_RETVAL_SUCCESS)
@@ -652,16 +664,19 @@ error_t gsm_modem_get_dce_revision(gsm_modem_t* p_gsm_modem)
 }
 #endif
 
-error_t gsm_modem_get_dce_imei(gsm_modem_t* p_gsm_modem)
+error_t gsm_modem_get_dce_imei(gsm_modem_t* p_gsm_modem, char* imei)
 {
     atmodem_cmd_desc_t cmd_desc;
 
     ASSERT(p_gsm_modem);
+    ASSERT(imei);
 
     cmd_desc.cmd = GSM_CMD_GET_IMEI;
     cmd_desc.cmd_size = 0;
     cmd_desc.resp_callback = &gsm_modem_handle_cgsn;
     cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+
+    p_gsm_modem->priv_resources = (void*) imei;
 
     if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                     != ATMODEM_RETVAL_SUCCESS)
@@ -673,16 +688,19 @@ error_t gsm_modem_get_dce_imei(gsm_modem_t* p_gsm_modem)
     return OK;
 }
 
-error_t gsm_modem_get_dce_imsi(gsm_modem_t* p_gsm_modem)
+error_t gsm_modem_get_dce_imsi(gsm_modem_t* p_gsm_modem, char* imsi)
 {
     atmodem_cmd_desc_t cmd_desc;
 
     ASSERT(p_gsm_modem);
+    ASSERT(imsi);
 
     cmd_desc.cmd = GSM_CMD_GET_IMSI;
     cmd_desc.cmd_size = 0;
     cmd_desc.resp_callback = &gsm_modem_handle_cimi;
     cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+
+    p_gsm_modem->priv_resources = (void*) imsi;
 
     if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                     != ATMODEM_RETVAL_SUCCESS)
@@ -694,16 +712,20 @@ error_t gsm_modem_get_dce_imsi(gsm_modem_t* p_gsm_modem)
     return OK;
 }
 
-error_t gsm_modem_get_character_set(gsm_modem_t* p_gsm_modem)
+error_t gsm_modem_get_dce_character_set(gsm_modem_t* p_gsm_modem, 
+                                                        gsm_modem_chset_t* chset)
 {
     atmodem_cmd_desc_t cmd_desc;
 
     ASSERT(p_gsm_modem);
+    ASSERT(chset);
 
     cmd_desc.cmd = GSM_CMD_GET_CHSET;
     cmd_desc.cmd_size = 0;
     cmd_desc.resp_callback = &gsm_modem_handle_cscs;
     cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
+
+    p_gsm_modem->priv_resources = (void*) chset;
 
     if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                     != ATMODEM_RETVAL_SUCCESS)
@@ -715,13 +737,14 @@ error_t gsm_modem_get_character_set(gsm_modem_t* p_gsm_modem)
     return OK;
 }
 
-error_t gsm_modem_set_character_set(gsm_modem_t* p_gsm_modem, gsm_modem_chset_t chset)
+error_t gsm_modem_set_dce_character_set(gsm_modem_t* p_gsm_modem, 
+                                                        gsm_modem_chset_t chset)
 {
     char cmd_str[16];
     atmodem_cmd_desc_t cmd_desc;
 
     ASSERT(p_gsm_modem);
-    ASSERT(chset < GSM_MODEM_CHSET_MAX);
+    ASSERT(chset < GSM_MODEM_CHSET_INVALID);
 
     cmd_desc.resp_callback = &gsm_modem_handle_default;
     cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
@@ -743,6 +766,18 @@ error_t gsm_modem_set_character_set(gsm_modem_t* p_gsm_modem, gsm_modem_chset_t 
 
     return OK;
 }
+
+const char* gsm_modem_dce_chset_to_str(gsm_modem_chset_t chset)
+{
+    if(chset < GSM_MODEM_CHSET_INVALID)
+    {
+        return str_chsets[chset];
+    }
+
+    return NULL;
+}
+
+#if 0
 error_t gsm_modem_set_network_registeration_result_code
                                         (gsm_modem_t* p_gsm_modem, uint8_t verbosity)
 {
@@ -896,6 +931,7 @@ error_t gsm_modem_get_operator(gsm_modem_t* p_gsm_modem)
 
     return OK;
 }
+#endif
 
 error_t gsm_modem_sync(gsm_modem_t* p_gsm_modem)
 {
@@ -930,54 +966,7 @@ error_t gsm_modem_init(gsm_modem_t* p_gsm_modem, const atmodem_config_t* p_dte_c
     p_gsm_modem->dte_layer.upper_layer = (void*) p_gsm_modem;
     p_gsm_modem->dte_layer.unsco_callback = &gsm_modem_handle_unsolicited_resp;
 
-    if(gsm_modem_get_dce_manufacturer(p_gsm_modem) != OK)
-    {
-        return FAILED;
-    }
-
-    if(gsm_modem_get_dce_model_name(p_gsm_modem) != OK)
-    {
-        return FAILED;
-    }
-
-    if(gsm_modem_get_dce_imei(p_gsm_modem) != OK)
-    {
-        return FAILED;
-    }
-
-    if(gsm_modem_get_dce_imsi(p_gsm_modem) != OK)
-    {
-        return FAILED;
-    }
-
-    if(gsm_modem_set_network_registeration_result_code(p_gsm_modem, 
-                        GSM_MODEM_NETWORK_REGISTERATION_UNSO_RESCODE_WITH_LOC) != OK)
-    {
-        return FAILED;
-    }
-
-    if(gsm_modem_select_operator_format(p_gsm_modem, GSM_MODEM_OP_FORMAT_LONG) != OK)
-    {
-        return FAILED;
-    }
-
-    if(gsm_modem_select_operator(p_gsm_modem, 
-                                    GSM_MODEM_OP_SELECTION_AUTO, NULL) != OK)
-    {
-        return FAILED;
-    }
-
-    if(gsm_modem_get_operator(p_gsm_modem) != OK)
-    {
-        return FAILED;
-    }
-
-    if(gsm_modem_set_character_set(p_gsm_modem, GSM_MODEM_CHSET_GSM) != OK)
-    {
-        return FAILED;
-    }
-
-    if(gsm_modem_get_character_set(p_gsm_modem) != OK)
+    if(gsm_modem_sync(p_gsm_modem) != OK)
     {
         return FAILED;
     }

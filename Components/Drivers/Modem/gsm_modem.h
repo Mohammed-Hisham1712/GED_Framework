@@ -22,6 +22,10 @@
 #define GSM_DCE_DEFAULT_CMD_TIMEOUT     300
 #define GSM_DCE_OP_SELECTION_TIMEOUT    3000
 
+/*
+ * General commands specified in 3GPP TS 27.007 version 10.3.0 Release 10
+*/
+
 #define GSM_CMD_GET_MANUFACTURER        "+CGMI"
 #define GSM_CMD_GET_MODEL_NAME          "+CGMM"
 #define GSM_CMD_GET_REVISION            "+CGMR"
@@ -54,6 +58,8 @@
 #define GSM_MODEM_STR_CHSET_UTF8        "UTF-8"
 #define GSM_MODEM_STR_CHSET_8859_1      "8859-1"
 #define GSM_MODEM_STR_CHSET_8859C       "8859-c"
+
+typedef uint8_t gsm_modem_chset_t;
 
 typedef enum
 {
@@ -100,7 +106,7 @@ typedef enum
     GSM_MODEM_OP_STATUS_MAX,
 } gsm_modem_op_status_t;
 
-typedef enum
+enum
 {
     GSM_MODEM_CHSET_GSM,
     GSM_MODEM_CHSET_HEX,
@@ -111,8 +117,8 @@ typedef enum
     GSM_MODEM_CHSET_UTF8,
     GSM_MODEM_CHSET_8859_1,
     GSM_MODEM_CHSET_8859C,
-    GSM_MODEM_CHSET_MAX
-} gsm_modem_chset_t;
+    GSM_MODEM_CHSET_INVALID,
+};
 
 typedef struct
 {
@@ -138,22 +144,8 @@ typedef struct
 
 typedef struct
 {
-    char manufacturer[GSM_DCE_MANUFACTURER_MAX_SIZE];
-    char model_name[GSM_DCE_MODEL_NAME_MAX_SIZE];
-    #if CONFIG_GSM_DCE_EXTRA_ATTRS
-    char revision[GSM_DCE_REVISION_MAX_SIZE];
-    #endif
-    char imei[GSM_DCE_IMEI_SIZE + 1];
-    char imsi[GSM_DCE_IMSI_SIZE + 1];
-    uint8_t chset;      /* Character set used by MT */
-} gsm_dce_attr_t;
-
-
-typedef struct
-{
-    gsm_dce_attr_t          dce_attr;
+    void*                   priv_resources;
     atmodem_layer_t         dte_layer;
-    gsm_modem_cs_net_info_t cs_network_info;
 } gsm_modem_t;
 
 
@@ -163,7 +155,7 @@ typedef struct
  * @param p_gsm_modem 
  * @return error_t 
  */
-error_t gsm_modem_get_dce_manufacturer(gsm_modem_t* p_gsm_modem);
+error_t gsm_modem_get_dce_manufacturer(gsm_modem_t* p_gsm_modem, char* manufacturere);
 
 /**
  * @brief 
@@ -171,7 +163,7 @@ error_t gsm_modem_get_dce_manufacturer(gsm_modem_t* p_gsm_modem);
  * @param p_gsm_modem 
  * @return error_t 
  */
-error_t gsm_modem_get_dce_model_name(gsm_modem_t* p_gsm_modem);
+error_t gsm_modem_get_dce_model_name(gsm_modem_t* p_gsm_modem, char* model_name);
 
 /**
  * @brief 
@@ -179,7 +171,7 @@ error_t gsm_modem_get_dce_model_name(gsm_modem_t* p_gsm_modem);
  * @param p_gsm_modem 
  * @return error_t 
  */
-error_t gsm_modem_get_dce_revision(gsm_modem_t* p_gsm_modem);
+error_t gsm_modem_get_dce_revision(gsm_modem_t* p_gsm_modem, char* revision);
 
 /**
  * @brief 
@@ -187,7 +179,7 @@ error_t gsm_modem_get_dce_revision(gsm_modem_t* p_gsm_modem);
  * @param p_gsm_modem 
  * @return error_t 
  */
-error_t gsm_modem_get_dce_imei(gsm_modem_t* p_gsm_modem);
+error_t gsm_modem_get_dce_imei(gsm_modem_t* p_gsm_modem, char* imei);
 
 
 /**
@@ -196,7 +188,35 @@ error_t gsm_modem_get_dce_imei(gsm_modem_t* p_gsm_modem);
  * @param p_gsm_modem 
  * @return error_t 
  */
-error_t gsm_modem_get_dce_imsi(gsm_modem_t* p_gsm_modem);
+error_t gsm_modem_get_dce_imsi(gsm_modem_t* p_gsm_modem, char* imsi);
+
+/**
+ * @brief 
+ * 
+ * @param p_gsm_modem 
+ * @param chset 
+ * @return error_t 
+ */
+error_t gsm_modem_get_dce_character_set(gsm_modem_t* p_gsm_modem, 
+                                                    gsm_modem_chset_t* chset);
+
+/**
+ * @brief 
+ * 
+ * @param p_gsm_modem 
+ * @param chset 
+ * @return error_t 
+ */
+error_t gsm_modem_set_dce_character_set(gsm_modem_t* p_gsm_modem, 
+                                                    gsm_modem_chset_t chset);
+
+/**
+ * @brief 
+ * 
+ * @param chset 
+ * @return const char* 
+ */
+const char* gsm_modem_dce_chset_to_str(gsm_modem_chset_t chset);
 
 
 /**

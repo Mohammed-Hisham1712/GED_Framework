@@ -161,13 +161,13 @@ typedef struct
 
 /**
  * @brief 
- * cmd: Pointer to a string containing the command to send to DCE
- * resp_callback: Callback function when info. text or result code
+ * \p cmd: Pointer to a string containing the command to send to DCE
+ * \p resp_callback: Callback function when info. text or result code
  * is received from DCE in response to the preceeded command. Could
  * NULL
- * timeout_ms: Timeout in milliseconds that DCE should respond within
+ * \p timeout_ms: Timeout in milliseconds that DCE should respond within
  * that time
- * cmd_size: Command size in bytes excluding the null byte character. If 0
+ * \p cmd_size: Command size in bytes excluding the null byte character. If 0
  * then size of command is calculated by strlen.
  */
 typedef struct
