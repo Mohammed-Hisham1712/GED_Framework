@@ -146,6 +146,7 @@ static int gsm_modem_get_resp_param(const char* resp, char* pdest,
     return param_len;
 }
 
+#if 0
 static error_t gsm_modem_handle_unso_creg(gsm_modem_t* p_gsm_modem, const char* resp)
 {
     char param[10];
@@ -194,6 +195,7 @@ static error_t gsm_modem_handle_unso_creg(gsm_modem_t* p_gsm_modem, const char* 
 
     return OK;
 }
+#endif
 
 static error_t gsm_modem_handle_unsolicited_resp(atmodem_rescode_t rescode,
                                                         const char* resp, void* args)
@@ -214,7 +216,9 @@ static error_t gsm_modem_handle_unsolicited_resp(atmodem_rescode_t rescode,
         if((resp_len >= sizeof(GSM_UNSO_CREG)) &&
                         memcmp(resp, GSM_UNSO_CREG, sizeof(GSM_UNSO_CREG) - 1) == 0)
         {
+            #if 0
             l_ret = gsm_modem_handle_unso_creg(p_gsm_modem, resp);
+            #endif
         }
     }
 
@@ -224,7 +228,6 @@ static error_t gsm_modem_handle_unsolicited_resp(atmodem_rescode_t rescode,
 static error_t gsm_modem_handle_default(atmodem_rescode_t rescode, 
                                                         const char* resp, void* args)
 {
-    gsm_modem_t* p_gsm_modem;
     error_t l_ret;
 
     (void) args;
@@ -595,7 +598,7 @@ error_t gsm_modem_get_dce_manufacturer(gsm_modem_t* p_gsm_modem)
     cmd_desc.resp_callback = &gsm_modem_handle_cgmi;
     cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
 
-    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
+    if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                     != ATMODEM_RETVAL_SUCCESS)
     {
         GSM_MODEM_LOGE("+CGMI send failed");
@@ -616,8 +619,8 @@ error_t gsm_modem_get_dce_model_name(gsm_modem_t* p_gsm_modem)
     cmd_desc.resp_callback = &gsm_modem_handle_cgmm;
     cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
 
-    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
-                                                    != ATMODEM_RETVAL_SUCCESS)
+    if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
+                                                        != ATMODEM_RETVAL_SUCCESS)
     {
         GSM_MODEM_LOGE("+CGMM send failed");
         return FAILED;
@@ -638,7 +641,7 @@ error_t gsm_modem_get_dce_revision(gsm_modem_t* p_gsm_modem)
     cmd_desc.resp_callback = &gsm_modem_handle_cgmr;
     cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
 
-    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
+    if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                     != ATMODEM_RETVAL_SUCCESS)
     {
         GSM_MODEM_LOGE("+CGMR send failed");
@@ -660,7 +663,7 @@ error_t gsm_modem_get_dce_imei(gsm_modem_t* p_gsm_modem)
     cmd_desc.resp_callback = &gsm_modem_handle_cgsn;
     cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
 
-    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
+    if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                     != ATMODEM_RETVAL_SUCCESS)
     {
         GSM_MODEM_LOGE("+CGSN send failed");
@@ -681,7 +684,7 @@ error_t gsm_modem_get_dce_imsi(gsm_modem_t* p_gsm_modem)
     cmd_desc.resp_callback = &gsm_modem_handle_cimi;
     cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
 
-    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
+    if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                     != ATMODEM_RETVAL_SUCCESS)
     {
         GSM_MODEM_LOGE("+CIMI send failed!");
@@ -702,7 +705,7 @@ error_t gsm_modem_get_character_set(gsm_modem_t* p_gsm_modem)
     cmd_desc.resp_callback = &gsm_modem_handle_cscs;
     cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
 
-    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
+    if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                     != ATMODEM_RETVAL_SUCCESS)
     {
         GSM_MODEM_LOGE("+CSCS? send failed!");
@@ -730,8 +733,8 @@ error_t gsm_modem_set_character_set(gsm_modem_t* p_gsm_modem, gsm_modem_chset_t 
         return FAILED;
     }
     cmd_desc.cmd = cmd_str;
-    
-    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
+
+    if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                     != ATMODEM_RETVAL_SUCCESS)
     {
         LOGE(GSM_MODEM_TAG, "%s send failed!", cmd_str);
@@ -765,7 +768,7 @@ error_t gsm_modem_set_network_registeration_result_code
             break;
     }
 
-    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
+    if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                     != ATMODEM_RETVAL_SUCCESS)
     {
         GSM_MODEM_LOGE("+CREG send failed!");
@@ -802,7 +805,7 @@ error_t gsm_modem_select_operator_format(gsm_modem_t* p_gsm_modem,
             return FAILED;
     }
 
-    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
+    if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                     != ATMODEM_RETVAL_SUCCESS)
     {
         GSM_MODEM_LOGE("+COPS send failed!");
@@ -863,7 +866,7 @@ error_t gsm_modem_select_operator(gsm_modem_t* p_gsm_modem,
     }
 
     cmd_desc.cmd = cmd_str;
-    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
+    if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                     != ATMODEM_RETVAL_SUCCESS)
     {
         GSM_MODEM_LOGE("+COPS send failed!");
@@ -884,7 +887,7 @@ error_t gsm_modem_get_operator(gsm_modem_t* p_gsm_modem)
     cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
     cmd_desc.cmd_size = 0;
 
-    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
+    if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                     != ATMODEM_RETVAL_SUCCESS)
     {
         GSM_MODEM_LOGE("+COPS? send failed!");
@@ -903,7 +906,7 @@ error_t gsm_modem_sync(gsm_modem_t* p_gsm_modem)
     cmd_desc.resp_callback = NULL;
     cmd_desc.timeout_ms = GSM_DCE_DEFAULT_CMD_TIMEOUT;
 
-    if(atmodem_send_command_wait(&p_gsm_modem->dte_layer, &cmd_desc, portMAX_DELAY) 
+    if(atmodem_send_command(&p_gsm_modem->dte_layer, &cmd_desc) 
                                                     != ATMODEM_RETVAL_SUCCESS)
     {
         GSM_MODEM_LOGE("AT send failed!");
@@ -915,8 +918,6 @@ error_t gsm_modem_sync(gsm_modem_t* p_gsm_modem)
 
 error_t gsm_modem_init(gsm_modem_t* p_gsm_modem, const atmodem_config_t* p_dte_config)
 {
-    error_t l_ret;
-
     ASSERT(p_gsm_modem);
 
     memset(p_gsm_modem, 0, sizeof(gsm_modem_t));
@@ -926,7 +927,7 @@ error_t gsm_modem_init(gsm_modem_t* p_gsm_modem, const atmodem_config_t* p_dte_c
         return FAILED;
     }
 
-    p_gsm_modem->dte_layer.args = (void*) p_gsm_modem;
+    p_gsm_modem->dte_layer.upper_layer = (void*) p_gsm_modem;
     p_gsm_modem->dte_layer.unsco_callback = &gsm_modem_handle_unsolicited_resp;
 
     if(gsm_modem_get_dce_manufacturer(p_gsm_modem) != OK)
@@ -977,11 +978,6 @@ error_t gsm_modem_init(gsm_modem_t* p_gsm_modem, const atmodem_config_t* p_dte_c
     }
 
     if(gsm_modem_get_character_set(p_gsm_modem) != OK)
-    {
-        return FAILED;
-    }
-
-    if(gsm_modem_sync(p_gsm_modem) != OK)
     {
         return FAILED;
     }

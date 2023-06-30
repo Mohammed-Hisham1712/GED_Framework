@@ -197,7 +197,7 @@ static atmodem_retval_t atmodem_process_cmd_resp(atmodem_layer_t* p_modem, char 
                     if(p_modem->cmd_callback)
                     {
                         if(p_modem->cmd_callback(rescode, 
-                            (const char*)p_modem->rx_buffer, p_modem->args) != OK)
+                            (const char*)p_modem->rx_buffer, p_modem->upper_layer) != OK)
                         {
                             ATMODEM_LOGE("Response to cmd failed!");
                         }
@@ -208,7 +208,7 @@ static atmodem_retval_t atmodem_process_cmd_resp(atmodem_layer_t* p_modem, char 
                     if(p_modem->unsco_callback)
                     {
                         if(p_modem->unsco_callback(rescode, 
-                                (const char*) p_modem->rx_buffer, p_modem->args) != OK)
+                            (const char*) p_modem->rx_buffer, p_modem->upper_layer) != OK)
                         {
                             ATMODEM_LOGE("Unsolicited callback failed!");
                         }
@@ -225,7 +225,6 @@ static atmodem_retval_t atmodem_process_cmd_resp(atmodem_layer_t* p_modem, char 
                         {
                             xSemaphoreGive(p_modem->cmd_semaphore);
                         }
-                        timer_clear(&p_modem->cmd_timer);
                         break;
                     default:
                         break;
@@ -311,19 +310,23 @@ static atmodem_retval_t atmodem_rx(atmodem_layer_t* p_modem)
     return ATMODEM_RETVAL_SUCCESS;
 }
 
-error_t atmodem_abort_command(atmodem_layer_t* p_modem)
+error_t atmodem_abort(atmodem_layer_t* p_modem)
 {
     ASSERT(p_modem);
 
     timer_clear(&p_modem->interoctet_resp_timer);
-    timer_clear(&p_modem->cmd_timer);
                     
     p_modem->rx_state = ATMODEM_RX_STATE_HEADER_CR;
-    p_modem->status &= ~ATMODEM_STATUS_CMD_BUSY;
 
-    if(p_modem->cmd_semaphore)
+    if(p_modem->status & ATMODEM_STATUS_CMD_BUSY)
     {
-        xSemaphoreGive(p_modem->cmd_semaphore);
+        p_modem->status &= ~ATMODEM_STATUS_CMD_BUSY;
+        p_modem->status |= ATMODEM_STATUS_CMD_ABORTED;
+
+        if(p_modem->cmd_semaphore)
+        {
+            xSemaphoreGive(p_modem->cmd_semaphore);
+        }
     }
 
     return ATMODEM_RETVAL_SUCCESS;
@@ -350,18 +353,15 @@ static void atmodem_tsk_handler(void* args)
                 if(timer_elapsed(&p_modem->interoctet_resp_timer) > 
                                                     INTEROCTET_RESP_TIMEOUT)
                 {
-                    atmodem_abort_command(p_modem);
+                    atmodem_abort(p_modem);
                     ATMODEM_LOGW("Inter-octet timer timeout");
                 }
 
-                if((p_modem->cmd_timeout > 0) && 
-                            timer_elapsed(&p_modem->cmd_timer) > p_modem->cmd_timeout)
+                if(atmodem_rx(p_modem) != ATMODEM_RETVAL_SUCCESS)
                 {
-                    atmodem_abort_command(p_modem);
-                    ATMODEM_LOGW("CMD response timed out");
+                    atmodem_abort(p_modem);
+                    ATMODEM_LOGW("Receive failed, aborting...");
                 }
-
-                atmodem_rx(p_modem);
                 break;
             case ATMODEM_STATE_CMD_ONLINE:
                 break;
@@ -394,7 +394,7 @@ atmodem_retval_t atmodem_init(atmodem_layer_t* p_modem, const atmodem_config_t* 
 
     p_modem->serial_port = p_config->serial_port;
     p_modem->tsk_period = p_config->tsk_period;
-    vSemaphoreCreateBinary(p_modem->cmd_semaphore);
+    p_modem->cmd_semaphore = xSemaphoreCreateBinary();
     
     if(p_modem->cmd_semaphore == NULL)
     {
@@ -403,7 +403,7 @@ atmodem_retval_t atmodem_init(atmodem_layer_t* p_modem, const atmodem_config_t* 
     
     ret = xTaskCreate(atmodem_tsk_handler, "atmodem_task", 
                                         p_config->tsk_stack_size,
-                                        p_modem,
+                                        (void*) p_modem,
                                         p_config->tsk_priority,
                                         &p_modem->tsk_handle);
     if(ret != pdPASS)
@@ -418,12 +418,15 @@ atmodem_retval_t atmodem_init(atmodem_layer_t* p_modem, const atmodem_config_t* 
 
 atmodem_retval_t atmodem_deinit(atmodem_layer_t* p_modem)
 {
-    vTaskDelete(p_modem->tsk_handle);
+    
+    atmodem_abort(p_modem);
     
     if(p_modem->cmd_semaphore)
     {
         vSemaphoreDelete(p_modem->cmd_semaphore);
     }
+
+    vTaskDelete(p_modem->tsk_handle);
 
     return ATMODEM_RETVAL_SUCCESS;
 }
@@ -435,6 +438,7 @@ atmodem_retval_t atmodem_send_command(atmodem_layer_t* p_modem,
     char* p_dest;
     uint16_t cmd_size;
     uint16_t to_send;
+    BaseType_t ret;
 
     ASSERT(p_modem);
     ASSERT(p_cmd_desc);
@@ -480,7 +484,6 @@ atmodem_retval_t atmodem_send_command(atmodem_layer_t* p_modem,
     }
     
     p_modem->cmd_callback = p_cmd_desc->resp_callback;
-    p_modem->cmd_timeout = p_cmd_desc->timeout_ms;
     p_modem->status |= ATMODEM_STATUS_CMD_BUSY;
     to_send = p_dest - at_cmd;
 
@@ -492,33 +495,21 @@ atmodem_retval_t atmodem_send_command(atmodem_layer_t* p_modem,
         return ATMODEM_RETVAL_TX_FAILED;
     }
 
-    if(p_modem->cmd_timeout > 0)
+    if(p_modem->cmd_semaphore)
     {
-        timer_start(&p_modem->cmd_timer);
+        ret = xSemaphoreTake(p_modem->cmd_semaphore, p_cmd_desc->timeout_ms);
+        if(ret != pdPASS)
+        {
+            atmodem_abort(p_modem);            
+        }
+    }
+
+    if(p_modem->status & ATMODEM_STATUS_CMD_ABORTED)
+    {
+        p_modem->status &= ~ATMODEM_STATUS_CMD_ABORTED;
+
+        return ATMODEM_RETVAL_CMD_ABORTED;
     }
 
     return ATMODEM_RETVAL_SUCCESS;
 }
-
-atmodem_retval_t atmodem_send_command_wait(atmodem_layer_t* p_modem, 
-                                    const atmodem_cmd_desc_t* p_cmd, uint32_t timeout)
-{
-    BaseType_t ret;
-
-    if(p_modem->cmd_semaphore)
-    {
-        ret = xSemaphoreTake(p_modem->cmd_semaphore, timeout);
-
-        if(ret != pdTRUE)
-        {
-            ATMODEM_LOGW("Failed to take semaphore");
-        }
-    }
-    else
-    {
-        return ATMODEM_RETVAL_FAILED;
-    }
-    
-    return atmodem_send_command(p_modem, p_cmd);
-}
-

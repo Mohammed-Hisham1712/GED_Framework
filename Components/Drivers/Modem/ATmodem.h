@@ -68,6 +68,7 @@
 #define ATMODEM_STATUS_VOICE_CALL           0x04
 #define ATMODEM_STATUS_HANGUP_IN_PROGRESS   0x08
 #define ATMODEM_STATUS_CONNECTED            0x10
+#define ATMODEM_STATUS_CMD_ABORTED          0x20
 
 
 typedef enum
@@ -110,6 +111,7 @@ typedef enum
     ATMODEM_RETVAL_UNEXPECTED_RESP,
     ATMODEM_RETVAL_FULL_BUFFER,
     ATMODEM_RETVAL_TX_FAILED,
+    ATMODEM_RETVAL_CMD_ABORTED,
 } atmodem_retval_t;
 
 
@@ -122,11 +124,9 @@ typedef struct
     atmodem_cmd_resp_callback_t cmd_callback;
     atmodem_unso_callback_t     unsco_callback;
     TaskHandle_t                tsk_handle;
-    ms_timer_t                  cmd_timer;
     ms_timer_t                  interoctet_resp_timer;
     SemaphoreHandle_t           cmd_semaphore;
-    void*                       args;
-    uint16_t                    cmd_timeout;
+    void*                       upper_layer;
     uint16_t                    rx_consumed;
     uint8_t                     status;
     uint8_t                     state;
@@ -206,14 +206,4 @@ atmodem_retval_t atmodem_send_command(atmodem_layer_t* p_modem,
                                                 const atmodem_cmd_desc_t* p_cmd_desc);
 
 
-/**
- * @brief 
- * 
- * @param p_modem 
- * @param p_cmd 
- * @param timeout 
- * @return atmodem_retval_t 
- */
-atmodem_retval_t atmodem_send_command_wait(atmodem_layer_t* p_modem, 
-                                    const atmodem_cmd_desc_t* p_cmd, uint32_t timeout);
 #endif
